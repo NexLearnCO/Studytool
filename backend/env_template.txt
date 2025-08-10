@@ -1,0 +1,9 @@
+# Copy this file to .env and replace with your actual API key
+OPENAI_API_KEY=your_openai_api_key_here
+FLASK_PORT=5000
+FLASK_DEBUG=True
+
+# Instructions:
+# 1. Rename this file from env_template.txt to .env
+# 2. Replace 'your_openai_api_key_here' with your actual OpenAI API key
+# 3. Get your API key from: https://platform.openai.com/api-keys

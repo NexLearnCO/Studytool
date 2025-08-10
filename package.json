@@ -1,0 +1,9 @@
+{
+  "name": "nexlearn-ai-notes",
+  "version": "1.0.0",
+  "description": "AI-powered note generation for NexLearn",
+  "scripts": {
+    "start": "python backend/app.py",
+    "dev": "python backend/app.py"
+  }
+}
