@@ -3,8 +3,13 @@ from dotenv import load_dotenv
 
 # Load environment variables
 try:
-    load_dotenv()
-except:
+    # Try to load .env from current directory first
+    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    load_dotenv(env_path)
+    # Also try from current working directory
+    load_dotenv('.env')
+except Exception as e:
+    print(f"Warning: Could not load .env file: {e}")
     pass  # Ignore dotenv errors
 
 class Config:

@@ -3,6 +3,17 @@ from youtube_transcript_api.formatters import TextFormatter
 import re
 import requests
 import json
+import os
+import tempfile
+import yt_dlp
+import openai
+import sys
+import os
+# Add backend directory to path for imports
+backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+from config import Config
 
 class YouTubeService:
     @staticmethod
@@ -82,28 +93,94 @@ class YouTubeService:
             return None
     
     @staticmethod
+    def get_transcript_hybrid(url):
+        """Hybrid audio extraction method using yt-dlp + OpenAI Whisper (from yt_to_text_hybrid.py)"""
+        try:
+            video_id = YouTubeService.extract_video_id(url)
+            print(f"🎬 Processing YouTube video: {video_id}")
+            
+            # Set up OpenAI
+            openai.api_key = Config.OPENAI_API_KEY
+            if not openai.api_key:
+                raise Exception("OpenAI API key not configured")
+            
+            # Create temporary directory for audio
+            with tempfile.TemporaryDirectory() as temp_dir:
+                print(f"📁 Using temp directory: {temp_dir}")
+                
+                # Download audio using yt-dlp
+                print("📥 Downloading audio...")
+                ydl_opts = {
+                    'format': 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio',
+                    'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
+                    'quiet': True,
+                    'no_warnings': True,
+                }
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=True)
+                    title = info.get('title', 'Unknown Video')
+                    duration = info.get('duration', 0)
+                
+                # Find downloaded audio file
+                audio_file = None
+                for file in os.listdir(temp_dir):
+                    if file.endswith(('.m4a', '.webm', '.mp3', '.wav')):
+                        audio_file = os.path.join(temp_dir, file)
+                        break
+                
+                if not audio_file:
+                    raise Exception("No audio file found after download")
+                
+                print(f"🎵 Audio downloaded: {os.path.basename(audio_file)}")
+                
+                # Transcribe using OpenAI Whisper
+                print("🎤 Transcribing with OpenAI Whisper...")
+                with open(audio_file, 'rb') as f:
+                    response = openai.Audio.transcribe(
+                        model="whisper-1",
+                        file=f,
+                        response_format="text"
+                    )
+                
+                transcript = response.strip()
+                
+                if not transcript:
+                    raise Exception("Empty transcript received")
+                
+                print(f"✅ Transcription complete: {len(transcript)} characters")
+                
+                return {
+                    'video_id': video_id,
+                    'url': url,
+                    'title': title,
+                    'duration': duration,
+                    'transcript': transcript,
+                    'method': 'hybrid_audio_whisper'
+                }
+                
+        except Exception as e:
+            print(f"❌ Hybrid transcription failed: {str(e)}")
+            raise e
+    
+    @staticmethod
     def get_transcript(url):
-        """Get transcript from YouTube video - Audio extraction as primary method"""
+        """Get transcript from YouTube video - Hybrid approach with improved audio extraction"""
         try:
             video_id = YouTubeService.extract_video_id(url)
             print(f"Processing YouTube video: {video_id}")
             
-            # Method 1: Try audio extraction with Whisper (most reliable when it works)
-            print("Method 1: Trying audio extraction with Whisper...")
+            # Method 1: Use improved hybrid audio extraction (yt_to_text_hybrid.py logic)
+            print("Method 1: Trying improved audio extraction with OpenAI Whisper...")
             try:
-                from services.youtube_audio_service import YouTubeAudioService
-                audio_service = YouTubeAudioService()
-                result = audio_service.get_transcript(url)
+                result = YouTubeService.get_transcript_hybrid(url)
                 
-                if result and result['transcript'].strip():
+                if result and result.get('transcript', '').strip():
                     print(f"Method 1 Success: {len(result['transcript'])} characters")
                     return result
                     
             except Exception as e:
-                print(f"Method 1 (Audio) failed: {str(e)}")
-                # Common issues: FFmpeg not installed, YouTube blocking, region restrictions
-                if "mhtml" in str(e) or "not found after download" in str(e):
-                    print("YouTube may be blocking downloads, trying transcript methods...")
+                print(f"Method 1 (Hybrid Audio) failed: {str(e)}")
                 # Continue to other methods
             
             # Method 2: Try youtube-transcript-api (fallback)
