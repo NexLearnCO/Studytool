@@ -6,7 +6,11 @@ class OpenAIService:
         openai.api_key = Config.OPENAI_API_KEY
         
     def generate_notes(self, content, detail_level='medium', language='zh-tw', content_type='general'):
-        """Generate notes from content using OpenAI with enhanced prompts"""
+        """Generate notes from content using OpenAI with enhanced prompts and smart content handling"""
+        
+        # Handle very large content by intelligent chunking if needed
+        if len(content) > 15000:  # ~15k characters is roughly safe limit for context
+            return self._generate_notes_chunked(content, detail_level, language, content_type)
         
         # Get optimized prompt based on detail level, language, and content type
         prompt = self._create_prompt(content, detail_level, language, content_type)
@@ -26,6 +30,55 @@ class OpenAIService:
             
         except Exception as e:
             raise Exception(f"Failed to generate notes: {str(e)}")
+    
+    def _generate_notes_chunked(self, content, detail_level, language, content_type):
+        """Handle very large content by chunking and combining results"""
+        
+        # Split content into manageable chunks
+        chunk_size = 12000  # Safe chunk size
+        chunks = []
+        
+        for i in range(0, len(content), chunk_size):
+            chunk = content[i:i + chunk_size]
+            chunks.append(chunk)
+        
+        # Generate notes for each chunk
+        chunk_notes = []
+        for i, chunk in enumerate(chunks):
+            try:
+                prompt = self._create_prompt(chunk, detail_level, language, content_type)
+                
+                # Add chunk context
+                if len(chunks) > 1:
+                    prompt += f"\n\n注意：這是第 {i+1} 部分，共 {len(chunks)} 部分。請確保內容銜接自然。"
+                
+                response = openai.ChatCompletion.create(
+                    model=Config.OPENAI_MODEL,
+                    messages=[
+                        {"role": "system", "content": "You are an expert note-taker who creates well-structured study notes in Markdown format."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    max_tokens=Config.OPENAI_MAX_TOKENS,
+                    temperature=Config.OPENAI_TEMPERATURE
+                )
+                
+                chunk_notes.append(response.choices[0].message.content)
+                
+            except Exception as e:
+                chunk_notes.append(f"## 第 {i+1} 部分處理錯誤\n\n錯誤: {str(e)}")
+        
+        # Combine all chunk notes
+        if len(chunk_notes) == 1:
+            return chunk_notes[0]
+        
+        # Create a unified document from chunks
+        combined_notes = "# 完整學習筆記\n\n"
+        for i, notes in enumerate(chunk_notes):
+            # Remove duplicate headers and combine
+            clean_notes = notes.replace("# ", "## ").replace("##", f"## 第 {i+1} 部分 - ")
+            combined_notes += clean_notes + "\n\n---\n\n"
+        
+        return combined_notes.rstrip("\n---\n")
     
     def _create_prompt(self, content, detail_level, language='zh-tw', content_type='general'):
         """Create optimized prompt for note generation based on Claude Opus 4.1 suggestions"""
@@ -125,7 +178,7 @@ class OpenAIService:
 ---
 
 **內容來源：**
-{content[:6000]}
+{content}
 """
         return prompt
     
@@ -176,14 +229,14 @@ class OpenAIService:
 ]
 
 基於以下筆記內容創建記憶卡片：
-{notes[:3000]}
+{notes}
 """
         
         try:
             response = openai.ChatCompletion.create(
                 model=Config.OPENAI_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=1000,
+                max_tokens=2000,  # Increased for better flashcards
                 temperature=0.5
             )
             
@@ -243,14 +296,14 @@ class OpenAIService:
 ]
 
 基於以下筆記內容創建測驗：
-{notes[:3000]}
+{notes}
 """
         
         try:
             response = openai.ChatCompletion.create(
                 model=Config.OPENAI_MODEL,
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=1500,
+                max_tokens=2500,  # Increased for comprehensive quizzes
                 temperature=0.5
             )
             
