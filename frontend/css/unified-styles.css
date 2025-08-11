@@ -1,0 +1,558 @@
+/* Modern Unified UI Styles for NexLearn AI Notes */
+
+/* Course Header Styles */
+.course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9ff 0%, #e8f2ff 100%);
+    border-radius: 12px;
+    border: 1px solid #e0e8ff;
+}
+
+.course-selection, .note-title {
+    flex: 1;
+    margin: 0 10px;
+}
+
+.course-selection label, .note-title label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #4a5568;
+}
+
+.course-dropdown, .title-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.course-dropdown:focus, .title-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Upload Sources Area */
+.upload-sources-area {
+    margin-bottom: 30px;
+}
+
+.upload-sources-area h3 {
+    color: #2d3748;
+    margin-bottom: 20px;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.sources-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* Source Group Styles */
+.source-group {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.source-group:hover {
+    border-color: #cbd5e0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.source-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #f7fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.source-header i {
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.youtube-icon { color: #ff0000; }
+.file-icon { color: #38a169; }
+.text-icon { color: #3182ce; }
+.web-icon { color: #805ad5; }
+
+.source-header span {
+    font-weight: 600;
+    color: #2d3748;
+    flex: 1;
+}
+
+.add-source-btn {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.add-source-btn:hover {
+    background: #5a67d8;
+}
+
+/* Sources List */
+.sources-list {
+    padding: 20px;
+}
+
+.source-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.source-item:last-child {
+    margin-bottom: 0;
+}
+
+.youtube-url-input, .webpage-url-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s ease;
+}
+
+.youtube-url-input:focus, .webpage-url-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.text-content-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+}
+
+.text-content-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.remove-source-btn {
+    background: #fed7d7;
+    color: #c53030;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.remove-source-btn:hover {
+    background: #feb2b2;
+    transform: scale(1.1);
+}
+
+/* File Upload Zone */
+.file-upload-zone {
+    padding: 20px;
+}
+
+.file-drop-area {
+    display: block;
+    width: 100%;
+    padding: 40px 20px;
+    border: 3px dashed #cbd5e0;
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f7fafc;
+}
+
+.file-drop-area:hover {
+    border-color: #667eea;
+    background: #edf2f7;
+}
+
+.upload-icon {
+    font-size: 48px;
+    color: #667eea;
+    margin-bottom: 16px;
+    display: block;
+}
+
+.upload-text strong {
+    display: block;
+    font-size: 16px;
+    color: #2d3748;
+    margin-bottom: 8px;
+}
+
+.upload-text p {
+    font-size: 14px;
+    color: #718096;
+    margin: 0;
+}
+
+.file-list {
+    margin-top: 20px;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: #edf2f7;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.file-info i {
+    color: #667eea;
+    font-size: 18px;
+}
+
+.file-name {
+    font-weight: 500;
+    color: #2d3748;
+}
+
+.file-size {
+    font-size: 12px;
+    color: #718096;
+}
+
+/* Settings Section */
+.generation-settings {
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 30px;
+}
+
+.settings-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+}
+
+.setting-group {
+    flex: 1;
+}
+
+.setting-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: #2d3748;
+}
+
+.detail-buttons, .language-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.detail-btn, .lang-btn {
+    padding: 10px 16px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    color: #4a5568;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.detail-btn:hover, .lang-btn:hover {
+    border-color: #cbd5e0;
+    background: #f7fafc;
+}
+
+.detail-btn.active, .lang-btn.active {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+/* Generate Button */
+.generate-section {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.generate-mega-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 20px 40px;
+    border-radius: 16px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    margin: 0 auto;
+    min-width: 300px;
+}
+
+.generate-mega-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+}
+
+.generate-mega-btn i {
+    font-size: 24px;
+}
+
+.generate-mega-btn span {
+    font-size: 18px;
+}
+
+.generate-mega-btn small {
+    font-size: 12px;
+    opacity: 0.9;
+    font-weight: 400;
+}
+
+/* Enhanced Action Buttons */
+.action-buttons {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f7fafc;
+    border-radius: 12px;
+}
+
+.language-switch-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.language-switch-group label {
+    font-weight: 600;
+    color: #4a5568;
+    font-size: 14px;
+}
+
+.lang-switch-btn {
+    padding: 6px 12px;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #4a5568;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.lang-switch-btn:hover {
+    border-color: #cbd5e0;
+}
+
+.lang-switch-btn.active {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+.edit-btn {
+    background: #38a169 !important;
+    border-color: #38a169 !important;
+}
+
+.edit-btn:hover {
+    background: #2f855a !important;
+}
+
+.edit-btn.active {
+    background: #2d3748 !important;
+    border-color: #2d3748 !important;
+}
+
+/* Edit Mode Styles */
+.notes-edit-mode {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px solid #e2e8f0;
+}
+
+.edit-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.toolbar-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.toolbar-btn.save-btn {
+    background: #38a169;
+    color: white;
+}
+
+.toolbar-btn.save-btn:hover {
+    background: #2f855a;
+}
+
+.toolbar-btn.cancel-btn {
+    background: #e53e3e;
+    color: white;
+    margin-left: 10px;
+}
+
+.toolbar-btn.cancel-btn:hover {
+    background: #c53030;
+}
+
+.edit-help {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #718096;
+    font-size: 14px;
+}
+
+.notes-editor {
+    width: 100%;
+    min-height: 400px;
+    padding: 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    resize: vertical;
+    margin-bottom: 20px;
+}
+
+.notes-editor:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.edit-preview h4 {
+    color: #2d3748;
+    margin-bottom: 12px;
+    font-size: 16px;
+}
+
+.preview-content {
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .course-header {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .sources-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .settings-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .language-switch-group {
+        justify-content: center;
+    }
+    
+    .generate-mega-btn {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+/* Animation for adding/removing sources */
+.source-item {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.source-item.removing {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
+@keyframes slideOut {
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
