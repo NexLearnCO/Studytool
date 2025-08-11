@@ -43,11 +43,12 @@ def youtube_to_notes():
         # Get transcript
         video_info = youtube_service.get_transcript(youtube_url)
         
-        # Generate notes
+        # Generate notes with YouTube-specific content type
         notes = openai_service.generate_notes(
             video_info['transcript'], 
             detail_level,
-            language
+            language,
+            'youtube'
         )
         
         return jsonify({
@@ -85,8 +86,8 @@ def pdf_to_notes():
         # Extract text from PDF
         text = pdf_service.extract_text(file)
         
-        # Generate notes
-        notes = openai_service.generate_notes(text, detail_level, language)
+        # Generate notes with PDF-specific content type
+        notes = openai_service.generate_notes(text, detail_level, language, 'pdf')
         
         return jsonify({
             "success": True,
@@ -109,8 +110,8 @@ def text_to_notes():
         if not text:
             return jsonify({"error": "Text is required"}), 400
         
-        # Generate notes
-        notes = openai_service.generate_notes(text, detail_level, language)
+        # Generate notes with general content type (default)
+        notes = openai_service.generate_notes(text, detail_level, language, 'general')
         
         return jsonify({
             "success": True,
