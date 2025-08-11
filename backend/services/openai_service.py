@@ -19,7 +19,7 @@ class OpenAIService:
             response = openai.ChatCompletion.create(
                 model=Config.OPENAI_MODEL,
                 messages=[
-                    {"role": "system", "content": "You are an expert note-taker who creates well-structured study notes in Markdown format."},
+                    {"role": "system", "content": "You are an expert note-taker who creates well-structured study notes in Markdown format. Provide content directly without meta-commentary or conclusive summaries."},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=Config.OPENAI_MAX_TOKENS,
@@ -50,12 +50,12 @@ class OpenAIService:
                 
                 # Add chunk context
                 if len(chunks) > 1:
-                    prompt += f"\n\n注意：這是第 {i+1} 部分，共 {len(chunks)} 部分。請確保內容銜接自然。"
+                    prompt += f"\n\n注意：這是第 {i+1} 部分，共 {len(chunks)} 部分。請確保內容銜接自然。不要添加總結性結尾，直接以內容結束。"
                 
                 response = openai.ChatCompletion.create(
                     model=Config.OPENAI_MODEL,
                     messages=[
-                        {"role": "system", "content": "You are an expert note-taker who creates well-structured study notes in Markdown format."},
+                        {"role": "system", "content": "You are an expert note-taker who creates well-structured study notes in Markdown format. Provide content directly without meta-commentary or conclusive summaries."},
                         {"role": "user", "content": prompt}
                     ],
                     max_tokens=Config.OPENAI_MAX_TOKENS,
@@ -170,10 +170,15 @@ class OpenAIService:
 - ✅ 無重複或冗餘信息
 - ✅ 保留所有重要細節
 
+**重要格式要求：**
+- 直接提供學習內容，不要添加總結性結尾
+- 不要包含"這些筆記提供了..."或"理解這些概念很重要"等總結語句
+- 筆記應該以實際內容結束，而不是元評論
+
 **語言設置：**
 {language_instruction}
 
-請創建一份專業的學習筆記，就像是由教育專家編寫的完整學習指南。
+請創建一份專業的學習筆記，直接提供學習內容，無需總結性結尾。
 
 ---
 
