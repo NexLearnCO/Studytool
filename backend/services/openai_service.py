@@ -361,7 +361,30 @@ class OpenAIService:
                 temperature=0.5
             )
             
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            
+            # Parse JSON response
+            import json
+            import re
+            
+            try:
+                # Try direct JSON parse
+                flashcards = json.loads(content)
+            except json.JSONDecodeError:
+                # Extract JSON from response if it's wrapped in text
+                json_match = re.search(r'\[.*\]', content, re.DOTALL)
+                if json_match:
+                    flashcards = json.loads(json_match.group())
+                else:
+                    # Fallback: create simple flashcards
+                    flashcards = [
+                        {
+                            "question": "What is the main topic of these notes?",
+                            "answer": "Based on the provided content, this covers the key concepts discussed in the notes."
+                        }
+                    ]
+            
+            return flashcards
             
         except Exception as e:
             raise Exception(f"Failed to generate flashcards: {str(e)}")
@@ -439,6 +462,42 @@ class OpenAIService:
         if not context_info:
             context_info = {}
         
+        # Enhanced detail level instructions (使用現有的詳細 detail_instructions)
+        detail_instructions = {
+            'brief': """專注於最核心的概念和要點。創建簡潔但完整的筆記：
+- 只包含必須掌握的關鍵概念
+- 每個主題限制在最重要的2-3個要點
+- 使用簡潔的語言，避免冗餘
+- 適合快速復習和概覽
+- 保持邏輯清晰但內容精簡""",
+            
+            'medium': """創建平衡但全面的詳細筆記：
+【核心要求】
+- 包含所有主要概念的完整解釋
+- 提供關鍵例子的詳細分析
+- 包含重要的公式、數據和步驟
+- 解釋概念間的關係和連結
+
+【詳細程度】
+- 每個概念都要有充分的解釋
+- 包含至少2-3個典型例子
+- 提供實用的識別方法和技巧
+- 適合深度學習，不只是概覽""",
+            
+            'detailed': """創建極其詳盡、全面的學習筆記：
+【完整性要求】
+- 包含源內容中的ALL信息，不遺漏任何細節
+- 提供COMPLETE解釋，不只是總結
+- 包含所有提及的例子、數據、公式、步驟
+- 解釋"為什麼"，不只是"是什麼"
+
+【詳細程度標準】
+- 沒看過原內容的人應該完全理解主題
+- 足夠詳細用於考試準備
+- 適合初學和復習雙重用途
+- 絕不使用縮略解釋 - 必須徹底完整"""
+        }
+        
         # Enhanced language-specific instructions
         language_instructions = {
             'en': "Create comprehensive unified study notes in English from multiple sources. Integrate all content seamlessly while maintaining academic quality.",
@@ -446,6 +505,7 @@ class OpenAIService:
             'zh-tw': "請從多個來源創建全面統一的繁體中文學習筆記。無縫整合所有內容，保持學術質量。"
         }
         
+        detail_instruction = detail_instructions.get(detail_level, detail_instructions['medium'])
         language_instruction = language_instructions.get(language, language_instructions['zh-tw'])
         
         # Context-aware prompt enhancement
@@ -504,6 +564,9 @@ class OpenAIService:
 ## 任務背景：
 {exam_context}{subject_context}{topic_context}{source_context}
 
+## 詳細程度要求：
+{detail_instruction}
+
 ## 內容整合要求：
 
 ### 🎯 整合原則：
@@ -512,26 +575,94 @@ class OpenAIService:
 3. **完整性** - 保留所有重要信息，避免重複和冗餘
 4. **學習導向** - 針對{exam_context}的學習和考試需求優化
 
-### 📚 筆記結構：
-1. **核心概念總覽** - 所有來源的關鍵概念統整
-2. **詳細內容組織** - 按邏輯主題分類整合
-3. **關鍵點提取** - 重要定義、公式、例子
-4. **學習重點** - 考試要點和重要知識點
-5. **內容來源標註** - 適當標註重要信息的來源類型
+### 📚 筆記結構要求：
+1. **🎯 概覽/介紹** - 主題總覽和學習目標
+2. **🧠 核心概念** - 所有關鍵概念的完整解釋
+3. **⚙️ 詳細機制/過程** - 逐步過程和運作方式
+4. **📝 實例分析** - 多個完整例子的詳細解析
+5. **⚠️ 特殊情況** - 例外情況和注意事項
+6. **📋 快速參考** - 總結表格和關鍵公式
+7. **🔍 學習技巧** - 記憶方法和識別技巧
 
-### 🔍 內容處理：
-- **去重整合** - 合併相似內容，補充不同角度的信息
-- **結構優化** - 重新組織為最佳學習順序
-- **語言統一** - 使用一致的術語和表達風格
-- **深度整合** - 建立不同來源間的概念聯繫
+### 🔍 格式要求：
+
+#### 1. 結構與格式化
+- 使用清晰的表情符號圖標標示主要章節 (🔄, 🧪, 📊, ⚗️, 📈, 💡等)
+- 創建多層次標題結構 (H1, H2, H3, H4)
+- 為比較和關係創建表格
+- 使用項目符號列表
+- **粗體**標示關鍵術語和定義
+- 包含相關的公式/方程式
+
+#### 2. 內容深度要求
+- 提供**完整**解釋，而非僅僅總結
+- 包含源內容中提及的**所有**例子
+- 顯示逐步過程
+- 包含具體數字、公式和數據
+- 解釋概念背後的"為什麼"，不只是"是什麼"
+
+#### 3. 必須包含的內容類型
+
+**對於概念：**
+- 完整定義
+- 運作方式
+- 重要性原因
+- 相關概念
+- 常見誤解
+
+**對於過程：**
+- 每個步驟的詳細解釋
+- 每個階段發生什麼
+- 常見變化
+- 條件和限制
+
+**對於例子：**
+- 完整的方程式/公式
+- 逐步分析
+- 識別所有組成部分
+- 解釋結果
+- 應用場景
+
+#### 4. 表格格式範例
+```
+| 概念/特徵 | 定義/說明 | 例子/應用 | 注意事項 |
+|----------|----------|----------|----------|
+| 項目A | 詳細說明A | 具體例子A | 特殊情況A |
+| 項目B | 詳細說明B | 具體例子B | 特殊情況B |
+```
+
+#### 5. 例子格式範例
+```
+### 🔬 例子X: [具體標題]
+**背景：** [情況描述]
+**步驟分析：**
+1. **步驟1：** [詳細解釋發生什麼]
+2. **步驟2：** [為什麼會這樣變化]
+3. **步驟3：** [最終結果如何產生]
+
+**關鍵識別點：**
+- 特徵A: [如何識別和意義]
+- 特徵B: [如何識別和意義]
+
+**結果解釋：** [為什麼會有這個結果，意義是什麼]
+```
 
 ### 📊 品質標準：
-- **準確性** - 保持所有技術信息的準確性
-- **完整性** - 覆蓋所有重要學習內容
-- **可讀性** - 清晰的結構和表達
-- **實用性** - 便於複習和考試準備
+- ✅ 沒看過原內容的人應該完全理解主題
+- ✅ 足夠詳細用於考試準備  
+- ✅ 適合初學和復習雙重用途
+- ✅ 包含具體公式、數據、計算
+- ✅ 解釋概念間關係和聯繫
+- ✅ 提供記憶輔助和模式識別
+- ✅ 絕不使用縮略解釋 - 必須徹底完整
 
-請基於以上要求，將提供的多源內容整合為高質量的統一學習筆記：
+### 🚫 避免事項：
+- 不要只是列出要點，要完整解釋
+- 不要跳過例子的詳細分析
+- 不要使用"等等"、"諸如此類"等省略語
+- 不要假設讀者已有背景知識
+
+請基於以上詳細要求，將提供的多源內容整合為高質量、超詳細的統一學習筆記：
 
 ---
 
@@ -539,7 +670,7 @@ class OpenAIService:
 
 ---
 
-請確保生成的筆記具有清晰的結構、豐富的內容和優秀的學習價值。"""
+請創建一份徹底完整、適合深度學習的專業筆記。"""
 
         try:
             response = openai.ChatCompletion.create(
@@ -548,7 +679,7 @@ class OpenAIService:
                     {"role": "system", "content": language_instruction},
                     {"role": "user", "content": prompt}
                 ],
-                max_tokens=4000,
+                max_tokens=8000,  # 大幅增加 token 限制以支持詳細筆記
                 temperature=0.3
             )
             
