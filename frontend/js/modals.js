@@ -251,9 +251,8 @@ class ModalManager {
             // Display the generated notes
             this.displayNotesInOutputSection(result);
             
-            // Show success and close modal
-            alert('筆記生成成功！');
-            this.closeCurrentModal();
+            // Show success but don't close modal - let user see the results below
+            alert('筆記生成成功！結果顯示在下方');
 
         } catch (error) {
             console.error('Notes generation error:', error);
@@ -503,9 +502,13 @@ class ModalManager {
     }
 
     displayNotesInOutputSection(noteData) {
-        // Store current notes globally
+        // Store current notes globally (both old and new format for compatibility)
         window.currentNotes = noteData.content;
         window.currentNoteData = noteData;
+        
+        // Also store in old format for compatibility
+        window.currentFlashcards = [];
+        window.currentQuiz = [];
         
         // Convert markdown to HTML
         const html = marked.parse(noteData.content);

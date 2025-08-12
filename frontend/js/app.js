@@ -20,6 +20,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize new unified system
     console.log('NexLearn AI Notes initialized with new UI system');
     
+    // Initialize unified note generation
+    initializeUnifiedNoteGeneration();
+    
     // Dispatch note generation events for flashcard integration
     window.dispatchNoteGenerated = function(noteData) {
         const event = new CustomEvent('noteGenerated', {
@@ -255,9 +258,13 @@ function displayNotes(notes) {
 
 // Generate flashcards
 async function generateFlashcards() {
-    if (!currentNotes) return;
+    if (!window.currentNotes) return;
     
-    showLoading();
+    // Show loading in flashcards container
+    const container = document.getElementById('flashcards-container');
+    if (container) {
+        container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> 生成記憶卡中...</div>';
+    }
     
     try {
         const selectedLanguage = document.querySelector('input[name="language"]:checked')?.value || 'zh-tw';
@@ -268,7 +275,10 @@ async function generateFlashcards() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                notes: currentNotes,
+                note_content: window.currentNotes,
+                count: 15,
+                difficulty: 'medium',
+                types: ['definition', 'example'],
                 language: selectedLanguage
             })
         });
@@ -279,13 +289,14 @@ async function generateFlashcards() {
             throw new Error(data.error);
         }
         
-        currentFlashcards = data.flashcards;
+        window.currentFlashcards = data.flashcards;
         displayFlashcards();
         
     } catch (error) {
-        alert('無法生成記憶卡片：' + error.message);
-    } finally {
-        hideLoading();
+        const container = document.getElementById('flashcards-container');
+        if (container) {
+            container.innerHTML = '<div class="error-state">生成記憶卡失敗：' + error.message + '</div>';
+        }
     }
 }
 
@@ -294,7 +305,12 @@ function displayFlashcards() {
     const container = document.getElementById('flashcards-container');
     container.innerHTML = '';
     
-    currentFlashcards.forEach((card, index) => {
+    if (!window.currentFlashcards || window.currentFlashcards.length === 0) {
+        container.innerHTML = '<div class="empty-state">沒有記憶卡</div>';
+        return;
+    }
+    
+    window.currentFlashcards.forEach((card, index) => {
         const cardDiv = document.createElement('div');
         cardDiv.className = 'flashcard';
         cardDiv.innerHTML = `
@@ -312,9 +328,13 @@ function displayFlashcards() {
 
 // Generate quiz
 async function generateQuiz() {
-    if (!currentNotes) return;
+    if (!window.currentNotes) return;
     
-    showLoading();
+    // Show loading in quiz container
+    const container = document.getElementById('quiz-container');
+    if (container) {
+        container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> 生成測驗中...</div>';
+    }
     
     try {
         const selectedLanguage = document.querySelector('input[name="language"]:checked')?.value || 'zh-tw';
@@ -325,7 +345,7 @@ async function generateQuiz() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                notes: currentNotes,
+                notes: window.currentNotes,
                 language: selectedLanguage
             })
         });
@@ -336,13 +356,14 @@ async function generateQuiz() {
             throw new Error(data.error);
         }
         
-        currentQuiz = data.quiz;
+        window.currentQuiz = data.quiz;
         displayQuiz();
         
     } catch (error) {
-        alert('無法生成測驗：' + error.message);
-    } finally {
-        hideLoading();
+        const container = document.getElementById('quiz-container');
+        if (container) {
+            container.innerHTML = '<div class="error-state">生成測驗失敗：' + error.message + '</div>';
+        }
     }
 }
 
@@ -351,7 +372,12 @@ function displayQuiz() {
     const container = document.getElementById('quiz-container');
     container.innerHTML = '';
     
-    currentQuiz.forEach((question, qIndex) => {
+    if (!window.currentQuiz || window.currentQuiz.length === 0) {
+        container.innerHTML = '<div class="empty-state">沒有測驗</div>';
+        return;
+    }
+    
+    window.currentQuiz.forEach((question, qIndex) => {
         const questionDiv = document.createElement('div');
         questionDiv.className = 'quiz-question';
         
@@ -400,7 +426,7 @@ function displayQuiz() {
 function checkQuizAnswers() {
     let correct = 0;
     
-    currentQuiz.forEach((question, qIndex) => {
+    window.currentQuiz.forEach((question, qIndex) => {
         const selected = document.querySelector(`.quiz-option[data-question="${qIndex}"].selected`);
         
         if (selected) {
@@ -449,14 +475,14 @@ function checkQuizAnswers() {
         }
     });
     
-    alert(`測驗結果：${correct}/${currentQuiz.length} 題正確`);
+    alert(`測驗結果：${correct}/${window.currentQuiz.length} 題正確`);
 }
 
 // Handle download
 function handleDownload() {
-    if (!currentNotes) return;
+    if (!window.currentNotes) return;
     
-    const blob = new Blob([currentNotes], { type: 'text/markdown' });
+    const blob = new Blob([window.currentNotes], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -498,4 +524,199 @@ function showLoading() {
 // Hide loading
 function hideLoading() {
     document.getElementById('loading').style.display = 'none';
+}
+
+// Initialize unified note generation
+function initializeUnifiedNoteGeneration() {
+    const generateBtn = document.getElementById('generate-unified-notes');
+    if (generateBtn) {
+        generateBtn.addEventListener('click', async function() {
+            // Show loading state
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...';
+
+            try {
+                // Collect all input data
+                const inputData = collectInputData();
+                
+                if (!validateInputData(inputData)) {
+                    throw new Error('請至少提供一個學習資源');
+                }
+
+                // Call unified notes API
+                const result = await callUnifiedNotesAPI(inputData);
+                
+                // Save the note
+                saveNote(result);
+                
+                // Trigger flashcard generation suggestion
+                if (window.dispatchNoteGenerated) {
+                    window.dispatchNoteGenerated(result);
+                }
+                
+                // Display the generated notes
+                displayNotesInOutputSection(result);
+                
+                // Show success
+                alert('筆記生成成功！');
+
+            } catch (error) {
+                console.error('Notes generation error:', error);
+                alert('生成筆記時發生錯誤：' + error.message);
+            } finally {
+                // Restore button state
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-magic"></i><span>🚀 生成統一學習筆記</span><small>整合所有資源生成完整筆記</small>';
+            }
+        });
+    }
+}
+
+function collectInputData() {
+    const data = {
+        title: document.getElementById('note-title-input')?.value || '',
+        examSystem: document.getElementById('exam-system-select')?.value || '',
+        subject: document.getElementById('subject-select')?.value || '',
+        topic: document.getElementById('topic-select')?.value || '',
+        customTopic: document.getElementById('custom-topic-input')?.value || '',
+        detailLevel: document.querySelector('.detail-btn.active')?.dataset.level || 'medium',
+        language: document.querySelector('.lang-btn.active')?.dataset.lang || 'zh-tw',
+        sources: {
+            youtube: collectSourceValues('youtube'),
+            files: collectSourceValues('files'),
+            text: collectSourceValues('text'),
+            webpages: collectSourceValues('webpages')
+        }
+    };
+    return data;
+}
+
+function collectSourceValues(type) {
+    const container = document.querySelector(`#${type}-sources-container`);
+    if (!container) return [];
+    
+    const inputs = container.querySelectorAll('.source-input');
+    return Array.from(inputs).map(input => input.value.trim()).filter(value => value !== '');
+}
+
+function validateInputData(data) {
+    const hasYoutube = data.sources.youtube.length > 0;
+    const hasFiles = data.sources.files.length > 0;
+    const hasText = data.sources.text.length > 0;
+    const hasWebpages = data.sources.webpages.length > 0;
+    
+    return hasYoutube || hasFiles || hasText || hasWebpages;
+}
+
+async function callUnifiedNotesAPI(inputData) {
+    try {
+        const response = await fetch('http://localhost:5000/api/unified-notes', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(inputData)
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || '生成失敗');
+        }
+        
+        return {
+            id: Date.now().toString(),
+            title: data.title,
+            examSystem: data.exam_system,
+            subject: data.subject,
+            topic: data.topic,
+            customTopic: data.custom_topic,
+            content: data.notes,
+            sources: data.sources,
+            detailLevel: inputData.detailLevel,
+            language: inputData.language,
+            createdAt: new Date().toISOString(),
+            lastModified: new Date().toISOString(),
+            wordCount: data.word_count
+        };
+    } catch (error) {
+        console.error('Unified notes API error:', error);
+        throw error;
+    }
+}
+
+function saveNote(noteData) {
+    // Save to localStorage
+    const savedNotes = JSON.parse(localStorage.getItem('savedNotes') || '[]');
+    savedNotes.push(noteData);
+    localStorage.setItem('savedNotes', JSON.stringify(savedNotes));
+}
+
+function displayNotesInOutputSection(noteData) {
+    // Store current notes globally (both old and new format for compatibility)
+    window.currentNotes = noteData.content;
+    window.currentNoteData = noteData;
+    
+    // Also store in old format for compatibility
+    window.currentFlashcards = [];
+    window.currentQuiz = [];
+    
+    // Convert markdown to HTML
+    const html = marked.parse(noteData.content);
+    
+    // Display in notes content area
+    const notesContent = document.getElementById('notes-content');
+    if (notesContent) {
+        notesContent.innerHTML = html;
+    }
+    
+    // Show output section
+    const outputSection = document.getElementById('output-section');
+    if (outputSection) {
+        outputSection.style.display = 'block';
+    }
+    
+    // Switch to notes view
+    const notesView = document.getElementById('notes-view');
+    if (notesView) {
+        // Hide all view contents
+        document.querySelectorAll('.view-content').forEach(view => {
+            view.classList.remove('active');
+        });
+        
+        // Show notes view
+        notesView.classList.add('active');
+        
+        // Activate notes button
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        const notesBtn = document.querySelector('.view-btn[data-view="notes"]');
+        if (notesBtn) {
+            notesBtn.classList.add('active');
+        }
+    }
+    
+    // Reset other views
+    window.currentFlashcards = [];
+    window.currentQuiz = [];
+    
+    // Clear other containers
+    const flashcardsContainer = document.getElementById('flashcards-container');
+    if (flashcardsContainer) {
+        flashcardsContainer.innerHTML = '';
+    }
+    
+    const quizContainer = document.getElementById('quiz-container');
+    if (quizContainer) {
+        quizContainer.innerHTML = '';
+    }
+    
+    // Scroll to output section
+    outputSection?.scrollIntoView({ behavior: 'smooth' });
 }

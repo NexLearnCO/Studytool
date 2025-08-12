@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="css/sidebar-styles.css">
     <link rel="stylesheet" href="css/modal-styles.css">
     <link rel="stylesheet" href="css/trilium-styles.css">
+    <link rel="stylesheet" href="css/output-styles.css">
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -62,111 +63,13 @@
                     <i class="fas fa-question-circle"></i>
                     <span>測驗集</span>
                 </button>
-                <button id="open-canvas-btn" class="quick-action-btn">
-                    <i class="fas fa-paint-brush"></i>
-                    <span>畫板</span>
-                </button>
-            </div>
-
-            <!-- Navigation Menu -->
-            <nav class="sidebar-nav">
-                <!-- System Views -->
-                <div class="nav-section">
-                    <div class="nav-section-header">
-                        <i class="fas fa-home"></i>
-                        <span>系統</span>
-                        <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
-                    </div>
-                    <ul class="nav-list">
-                        <li><a href="#" data-view="dashboard"><i class="fas fa-tachometer-alt"></i> 儀表板</a></li>
-                        <li><a href="#" data-view="all-notes"><i class="fas fa-sticky-note"></i> 全部筆記</a></li>
-                        <li><a href="#" data-view="recent-notes"><i class="fas fa-clock"></i> 最近查看</a></li>
-                        <li><a href="#" data-view="favorites"><i class="fas fa-star"></i> 我的最愛</a></li>
-                        <li><a href="#" data-view="search"><i class="fas fa-search"></i> 搜尋</a></li>
-                    </ul>
-                </div>
-
-                <!-- Dynamic Note Tree (Trilium-style) -->
-                <div class="nav-section">
-                    <div class="nav-section-header">
-                        <i class="fas fa-folder-tree"></i>
-                        <span>筆記樹</span>
-                        <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
-                    </div>
-                    <div id="note-tree" class="note-tree">
-                        <!-- Dynamic note tree will be generated here -->
-                        <div class="empty-tree">
-                            <i class="fas fa-seedling"></i>
-                            <span>開始建立您的知識樹</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Collections (Auto-generated based on course/exam selections) -->
-                <div class="nav-section">
-                    <div class="nav-section-header">
-                        <i class="fas fa-folder-open"></i>
-                        <span>智能分類</span>
-                        <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
-                    </div>
-                    <div id="smart-collections" class="smart-collections">
-                        <!-- Auto-generated collections will appear here -->
-                        <div class="empty-collections">
-                            <i class="fas fa-magic"></i>
-                            <span>基於您的筆記自動分類</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Learning Tools -->
-                <div class="nav-section">
-                    <div class="nav-section-header">
-                        <i class="fas fa-tools"></i>
-                        <span>學習工具</span>
-                        <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
-                    </div>
-                    <ul class="nav-list">
-                        <li><a href="#" data-view="flashcard-sets"><i class="fas fa-layer-group"></i> 記憶卡集</a></li>
-                        <li><a href="#" data-view="quiz-sets"><i class="fas fa-question-circle"></i> 測驗集</a></li>
-                        <li><a href="#" data-view="mindmaps"><i class="fas fa-project-diagram"></i> 思維導圖</a></li>
-                        <li><a href="#" data-view="canvases"><i class="fas fa-paint-brush"></i> 畫板集合</a></li>
-                    </ul>
-                </div>
-
-                <!-- Tags -->
-                <div class="nav-section">
-                    <div class="nav-section-header">
-                        <i class="fas fa-tags"></i>
-                        <span>標籤</span>
-                        <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
-                    </div>
-                    <div id="tags-list" class="tags-list">
-                        <!-- Dynamic tags will be generated here -->
-                        <div class="empty-tags">
-                            <i class="fas fa-tag"></i>
-                            <span>標籤會自動從筆記中提取</span>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <!-- Sidebar Footer -->
-            <div class="sidebar-footer">
-                <div class="storage-info">
-                    <i class="fas fa-database"></i>
-                    <span>已用空間: 2.3GB / 10GB</span>
-                </div>
-                <button class="settings-btn">
-                    <i class="fas fa-cog"></i>
-                    設置
-                </button>
             </div>
         </aside>
 
         <!-- Main Content Area -->
         <div class="main-container">
             <!-- Welcome Screen -->
-            <div id="welcome-screen" class="welcome-screen">
+            <div id="welcome-screen" class="welcome-screen" style="display: none;">
                 <div class="welcome-content">
                     <div class="welcome-hero">
                         <i class="fas fa-graduation-cap welcome-icon"></i>
@@ -309,7 +212,7 @@
                 </div>
             </div>
 
-            <div class="container" style="display: none;">
+            <div class="container">
             <!-- Modern Unified Input Section (Hidden by default, shown in modal) -->
             <section class="unified-input-section">
                 <!-- Enhanced Course and Exam Selection -->
@@ -537,7 +440,7 @@
             </div>
 
             <!-- Output Section -->
-            <section id="output-section" class="output-section" style="display:none;">
+            <section id="output-section" class="output-section">
                 <!-- View Toggle -->
                 <div class="view-toggle">
                     <button class="view-btn active" data-view="notes">

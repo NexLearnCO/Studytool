@@ -179,7 +179,16 @@ class SidebarManager {
 
     // Modal opening functions
     openNewNoteModal() {
-        window.modalManager?.openNewNoteModal();
+        // Instead of opening modal, scroll to input section
+        const inputSection = document.querySelector('.unified-input-section');
+        if (inputSection) {
+            inputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // Focus on title input if available
+            const titleInput = document.getElementById('note-title-input');
+            if (titleInput) {
+                setTimeout(() => titleInput.focus(), 500);
+            }
+        }
     }
 
     openNewFlashcardSetModal() {
