@@ -268,7 +268,10 @@ class ModalManager {
     collectInputData() {
         const data = {
             title: document.getElementById('note-title-input')?.value || '',
-            course: document.getElementById('course-select')?.value || '',
+            examSystem: document.getElementById('exam-system-select')?.value || '',
+            subject: document.getElementById('subject-select')?.value || '',
+            topic: document.getElementById('topic-select')?.value || '',
+            customTopic: document.getElementById('custom-topic-input')?.value || '',
             detailLevel: document.querySelector('.detail-btn.active')?.dataset.level || 'medium',
             language: document.querySelector('.lang-btn.active')?.dataset.lang || 'zh-tw',
             sources: {
@@ -415,7 +418,10 @@ class ModalManager {
         return {
             id: Date.now().toString(),
             title: inputData.title || '未命名筆記',
-            course: inputData.course,
+            examSystem: inputData.examSystem,
+            subject: inputData.subject,
+            topic: inputData.topic,
+            customTopic: inputData.customTopic,
             content: allNotes,
             sources: allContent,
             detailLevel: inputData.detailLevel,

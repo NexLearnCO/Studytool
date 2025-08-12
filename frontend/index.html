@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/unified-styles.css">
     <link rel="stylesheet" href="css/sidebar-styles.css">
     <link rel="stylesheet" href="css/modal-styles.css">
+    <link rel="stylesheet" href="css/trilium-styles.css">
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -69,150 +70,83 @@
 
             <!-- Navigation Menu -->
             <nav class="sidebar-nav">
+                <!-- System Views -->
                 <div class="nav-section">
                     <div class="nav-section-header">
-                        <i class="fas fa-sticky-note"></i>
-                        <span>筆記管理</span>
+                        <i class="fas fa-home"></i>
+                        <span>系統</span>
                         <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
                     </div>
                     <ul class="nav-list">
-                        <li><a href="#" data-view="all-notes"><i class="fas fa-list"></i> 全部筆記</a></li>
+                        <li><a href="#" data-view="dashboard"><i class="fas fa-tachometer-alt"></i> 儀表板</a></li>
+                        <li><a href="#" data-view="all-notes"><i class="fas fa-sticky-note"></i> 全部筆記</a></li>
                         <li><a href="#" data-view="recent-notes"><i class="fas fa-clock"></i> 最近查看</a></li>
                         <li><a href="#" data-view="favorites"><i class="fas fa-star"></i> 我的最愛</a></li>
-                        <li><a href="#" data-view="trash"><i class="fas fa-trash"></i> 回收站</a></li>
+                        <li><a href="#" data-view="search"><i class="fas fa-search"></i> 搜尋</a></li>
                     </ul>
                 </div>
 
+                <!-- Dynamic Note Tree (Trilium-style) -->
                 <div class="nav-section">
                     <div class="nav-section-header">
                         <i class="fas fa-folder-tree"></i>
-                        <span>課程分類</span>
+                        <span>筆記樹</span>
                         <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
                     </div>
-                    <ul class="nav-list category-tree">
-                        <!-- 學科分類 -->
-                        <li class="category-parent">
-                            <a href="#" class="category-toggle">
-                                <i class="fas fa-flask"></i> 科學 Sciences
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="category-children">
-                                <li><a href="#" data-category="chemistry"><i class="fas fa-atom"></i> 化學 Chemistry</a></li>
-                                <li><a href="#" data-category="physics"><i class="fas fa-satellite"></i> 物理 Physics</a></li>
-                                <li><a href="#" data-category="biology"><i class="fas fa-dna"></i> 生物 Biology</a></li>
-                            </ul>
-                        </li>
-                        <li class="category-parent">
-                            <a href="#" class="category-toggle">
-                                <i class="fas fa-calculator"></i> 數學 Mathematics
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="category-children">
-                                <li><a href="#" data-category="pure-math"><i class="fas fa-infinity"></i> 純數學</a></li>
-                                <li><a href="#" data-category="applied-math"><i class="fas fa-chart-line"></i> 應用數學</a></li>
-                                <li><a href="#" data-category="statistics"><i class="fas fa-chart-bar"></i> 統計學</a></li>
-                            </ul>
-                        </li>
-                        <li class="category-parent">
-                            <a href="#" class="category-toggle">
-                                <i class="fas fa-laptop-code"></i> 技術 Technology
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="category-children">
-                                <li><a href="#" data-category="computer-science"><i class="fas fa-code"></i> 計算機科學</a></li>
-                                <li><a href="#" data-category="engineering"><i class="fas fa-cogs"></i> 工程學</a></li>
-                            </ul>
-                        </li>
-                        <li class="category-parent">
-                            <a href="#" class="category-toggle">
-                                <i class="fas fa-building-columns"></i> 人文社科
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="category-children">
-                                <li><a href="#" data-category="literature"><i class="fas fa-book"></i> 文學</a></li>
-                                <li><a href="#" data-category="history"><i class="fas fa-monument"></i> 歷史</a></li>
-                                <li><a href="#" data-category="business"><i class="fas fa-briefcase"></i> 商業</a></li>
-                                <li><a href="#" data-category="languages"><i class="fas fa-language"></i> 語言學習</a></li>
-                            </ul>
-                        </li>
-                    </ul>
+                    <div id="note-tree" class="note-tree">
+                        <!-- Dynamic note tree will be generated here -->
+                        <div class="empty-tree">
+                            <i class="fas fa-seedling"></i>
+                            <span>開始建立您的知識樹</span>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Collections (Auto-generated based on course/exam selections) -->
                 <div class="nav-section">
                     <div class="nav-section-header">
-                        <i class="fas fa-graduation-cap"></i>
-                        <span>考試系統</span>
+                        <i class="fas fa-folder-open"></i>
+                        <span>智能分類</span>
                         <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
                     </div>
-                    <ul class="nav-list exam-categories">
-                        <li class="exam-parent">
-                            <a href="#" class="exam-toggle">
-                                <i class="fas fa-globe"></i> 國際課程
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="exam-children">
-                                <li><a href="#" data-exam="ibdp"><i class="fas fa-medal"></i> IB DP</a></li>
-                                <li><a href="#" data-exam="ial"><i class="fas fa-certificate"></i> IAL</a></li>
-                                <li><a href="#" data-exam="ias"><i class="fas fa-award"></i> IAS</a></li>
-                                <li><a href="#" data-exam="al"><i class="fas fa-trophy"></i> A Level</a></li>
-                                <li><a href="#" data-exam="as"><i class="fas fa-star"></i> AS Level</a></li>
-                            </ul>
-                        </li>
-                        <li class="exam-parent">
-                            <a href="#" class="exam-toggle">
-                                <i class="fas fa-school"></i> 英式課程
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="exam-children">
-                                <li><a href="#" data-exam="gcse"><i class="fas fa-book-open"></i> GCSE</a></li>
-                                <li><a href="#" data-exam="igcse"><i class="fas fa-globe-europe"></i> IGCSE</a></li>
-                            </ul>
-                        </li>
-                        <li class="exam-parent">
-                            <a href="#" class="exam-toggle">
-                                <i class="fas fa-flag"></i> 美式課程
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="exam-children">
-                                <li><a href="#" data-exam="ap"><i class="fas fa-university"></i> AP</a></li>
-                                <li><a href="#" data-exam="sat"><i class="fas fa-pencil-alt"></i> SAT</a></li>
-                            </ul>
-                        </li>
-                        <li class="exam-parent">
-                            <a href="#" class="exam-toggle">
-                                <i class="fas fa-flag-checkered"></i> 香港課程
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="exam-children">
-                                <li><a href="#" data-exam="hkdse"><i class="fas fa-graduation-cap"></i> HKDSE</a></li>
-                            </ul>
-                        </li>
-                        <li class="exam-parent">
-                            <a href="#" class="exam-toggle">
-                                <i class="fas fa-comments"></i> 語言測試
-                                <i class="fas fa-chevron-right toggle-icon"></i>
-                            </a>
-                            <ul class="exam-children">
-                                <li><a href="#" data-exam="ielts"><i class="fas fa-microphone"></i> IELTS</a></li>
-                                <li><a href="#" data-exam="toefl"><i class="fas fa-headphones"></i> TOEFL</a></li>
-                            </ul>
-                        </li>
-                        <li><a href="#" data-exam="others"><i class="fas fa-ellipsis-h"></i> 其他考試</a></li>
-                    </ul>
+                    <div id="smart-collections" class="smart-collections">
+                        <!-- Auto-generated collections will appear here -->
+                        <div class="empty-collections">
+                            <i class="fas fa-magic"></i>
+                            <span>基於您的筆記自動分類</span>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Learning Tools -->
                 <div class="nav-section">
                     <div class="nav-section-header">
-                        <i class="fas fa-layer-group"></i>
+                        <i class="fas fa-tools"></i>
                         <span>學習工具</span>
                         <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
                     </div>
                     <ul class="nav-list">
-                        <li><a href="#" data-view="flashcard-sets"><i class="fas fa-cards-blank"></i> 記憶卡集</a></li>
-                        <li><a href="#" data-view="quiz-sets"><i class="fas fa-list-check"></i> 測驗集</a></li>
+                        <li><a href="#" data-view="flashcard-sets"><i class="fas fa-layer-group"></i> 記憶卡集</a></li>
+                        <li><a href="#" data-view="quiz-sets"><i class="fas fa-question-circle"></i> 測驗集</a></li>
                         <li><a href="#" data-view="mindmaps"><i class="fas fa-project-diagram"></i> 思維導圖</a></li>
                         <li><a href="#" data-view="canvases"><i class="fas fa-paint-brush"></i> 畫板集合</a></li>
                     </ul>
+                </div>
+
+                <!-- Tags -->
+                <div class="nav-section">
+                    <div class="nav-section-header">
+                        <i class="fas fa-tags"></i>
+                        <span>標籤</span>
+                        <button class="expand-btn"><i class="fas fa-chevron-down"></i></button>
+                    </div>
+                    <div id="tags-list" class="tags-list">
+                        <!-- Dynamic tags will be generated here -->
+                        <div class="empty-tags">
+                            <i class="fas fa-tag"></i>
+                            <span>標籤會自動從筆記中提取</span>
+                        </div>
+                    </div>
                 </div>
             </nav>
 
@@ -378,23 +312,110 @@
             <div class="container" style="display: none;">
             <!-- Modern Unified Input Section (Hidden by default, shown in modal) -->
             <section class="unified-input-section">
-                <!-- Header with Course Selection -->
+                <!-- Enhanced Course and Exam Selection -->
                 <div class="course-header">
-                    <div class="course-selection">
-                        <label for="course-select">📚 課程分類：</label>
-                        <select id="course-select" class="course-dropdown">
-                            <option value="">選擇課程類別...</option>
-                            <option value="chemistry">🧪 化學 Chemistry</option>
-                            <option value="physics">⚗️ 物理 Physics</option>
-                            <option value="biology">🧬 生物 Biology</option>
-                            <option value="mathematics">📊 數學 Mathematics</option>
-                            <option value="computer-science">💻 計算機科學 Computer Science</option>
-                            <option value="business">💼 商業 Business</option>
-                            <option value="literature">📖 文學 Literature</option>
-                            <option value="history">🏛️ 歷史 History</option>
-                            <option value="languages">🌐 語言學習 Languages</option>
-                            <option value="other">📋 其他 Other</option>
-                        </select>
+                    <div class="classification-section">
+                        <h3>📚 課程分類</h3>
+                        
+                        <!-- Exam System Selection -->
+                        <div class="selection-group">
+                            <label for="exam-system-select">🎓 考試系統：</label>
+                            <select id="exam-system-select" class="classification-dropdown">
+                                <option value="">選擇考試系統...</option>
+                                <optgroup label="🌍 國際課程">
+                                    <option value="ibdp">🏅 IB Diploma Programme</option>
+                                    <option value="ial">📜 International A Level (IAL)</option>
+                                    <option value="ias">📋 International AS Level (IAS)</option>
+                                    <option value="al">🏆 A Level</option>
+                                    <option value="as">⭐ AS Level</option>
+                                </optgroup>
+                                <optgroup label="🏫 英式課程">
+                                    <option value="gcse">📖 GCSE</option>
+                                    <option value="igcse">🌐 IGCSE</option>
+                                </optgroup>
+                                <optgroup label="🇺🇸 美式課程">
+                                    <option value="ap">🎓 Advanced Placement (AP)</option>
+                                    <option value="sat">✏️ SAT</option>
+                                </optgroup>
+                                <optgroup label="🇭🇰 香港課程">
+                                    <option value="hkdse">🎯 HKDSE</option>
+                                </optgroup>
+                                <optgroup label="🗣️ 語言測試">
+                                    <option value="ielts">🎤 IELTS</option>
+                                    <option value="toefl">🎧 TOEFL</option>
+                                </optgroup>
+                                <optgroup label="📋 其他">
+                                    <option value="other-exam">📝 其他考試</option>
+                                    <option value="self-study">📚 自主學習</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <!-- Subject Selection -->
+                        <div class="selection-group">
+                            <label for="subject-select">📖 科目：</label>
+                            <select id="subject-select" class="classification-dropdown">
+                                <option value="">選擇科目...</option>
+                                <optgroup label="🧪 科學">
+                                    <option value="chemistry">⚗️ 化學 Chemistry</option>
+                                    <option value="physics">🔬 物理 Physics</option>
+                                    <option value="biology">🧬 生物 Biology</option>
+                                    <option value="environmental-science">🌱 環境科學</option>
+                                </optgroup>
+                                <optgroup label="📊 數學">
+                                    <option value="pure-mathematics">∞ 純數學</option>
+                                    <option value="applied-mathematics">📈 應用數學</option>
+                                    <option value="statistics">📊 統計學</option>
+                                    <option value="further-mathematics">🔢 進階數學</option>
+                                </optgroup>
+                                <optgroup label="💻 技術">
+                                    <option value="computer-science">💻 計算機科學</option>
+                                    <option value="information-technology">🖥️ 資訊科技</option>
+                                    <option value="engineering">⚙️ 工程學</option>
+                                </optgroup>
+                                <optgroup label="🏛️ 人文社科">
+                                    <option value="history">📜 歷史</option>
+                                    <option value="geography">🗺️ 地理</option>
+                                    <option value="economics">💰 經濟學</option>
+                                    <option value="business-studies">💼 商業研究</option>
+                                    <option value="psychology">🧠 心理學</option>
+                                </optgroup>
+                                <optgroup label="🎨 藝術語言">
+                                    <option value="english-literature">📖 英語文學</option>
+                                    <option value="chinese">🇨🇳 中文</option>
+                                    <option value="art-design">🎨 藝術設計</option>
+                                    <option value="music">🎵 音樂</option>
+                                    <option value="drama">🎭 戲劇</option>
+                                </optgroup>
+                                <optgroup label="🌐 語言">
+                                    <option value="english">🇬🇧 英語</option>
+                                    <option value="mandarin">🇨🇳 普通話</option>
+                                    <option value="cantonese">🇭🇰 粵語</option>
+                                    <option value="french">🇫🇷 法語</option>
+                                    <option value="spanish">🇪🇸 西班牙語</option>
+                                    <option value="german">🇩🇪 德語</option>
+                                    <option value="japanese">🇯🇵 日語</option>
+                                </optgroup>
+                                <optgroup label="📋 其他">
+                                    <option value="other-subject">📚 其他科目</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <!-- Topic/Chapter Selection (Dynamic) -->
+                        <div class="selection-group" id="topic-selection" style="display: none;">
+                            <label for="topic-select">📚 主題/章節：</label>
+                            <select id="topic-select" class="classification-dropdown">
+                                <option value="">選擇主題...</option>
+                                <!-- Topics will be populated dynamically based on subject -->
+                            </select>
+                        </div>
+
+                        <!-- Custom Topic Input -->
+                        <div class="selection-group">
+                            <label for="custom-topic-input">✏️ 自定義主題 (可選)：</label>
+                            <input type="text" id="custom-topic-input" class="topic-input" placeholder="例如：有機化學 - 烷烴反應">
+                        </div>
                     </div>
                     
                     <div class="note-title">
@@ -821,5 +842,6 @@
     <script src="js/flashcards.js"></script>
     <script src="js/quizzes.js"></script>
     <script src="js/canvas.js"></script>
+    <script src="js/trilium-tree.js"></script>
 </body>
 </html>
