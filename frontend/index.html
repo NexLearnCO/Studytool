@@ -7,11 +7,6 @@
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/unified-styles.css">
-    <link rel="stylesheet" href="css/sidebar-styles.css">
-    <link rel="stylesheet" href="css/modal-styles.css">
-    <link rel="stylesheet" href="css/trilium-styles.css">
-    <link rel="stylesheet" href="css/output-styles.css">
     
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -31,393 +26,144 @@
     <!-- Header -->
     <header class="header">
         <div class="container">
-            <div class="logo">
-                <h1>NexLearn AI 筆記生成器</h1>
-                <span class="subtitle">將任何內容轉換為智能學習筆記</span>
-            </div>
+            <h1><i class="fas fa-graduation-cap"></i> NexLearn AI 筆記生成器</h1>
+            <p>將任何內容轉換為智能學習筆記</p>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="main-content">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h3>📚 NexLearn</h3>
-                <button id="collapse-sidebar" class="collapse-btn">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-            </div>
-            
-            <!-- Quick Actions -->
-            <div class="quick-actions">
-                <button id="new-note-btn" class="quick-action-btn primary">
-                    <i class="fas fa-plus"></i>
-                    <span>新增筆記</span>
-                </button>
-                <button id="new-flashcard-set-btn" class="quick-action-btn">
-                    <i class="fas fa-layer-group"></i>
-                    <span>記憶卡集</span>
-                </button>
-                <button id="new-quiz-set-btn" class="quick-action-btn">
-                    <i class="fas fa-question-circle"></i>
-                    <span>測驗集</span>
-                </button>
-            </div>
-        </aside>
-
-        <!-- Main Content Area -->
-        <div class="main-container">
-            <!-- Welcome Screen -->
-            <div id="welcome-screen" class="welcome-screen" style="display: none;">
-                <div class="welcome-content">
-                    <div class="welcome-hero">
-                        <i class="fas fa-graduation-cap welcome-icon"></i>
-                        <h1>歡迎使用 NexLearn AI 筆記系統</h1>
-                        <p>智能學習筆記生成 • 多源內容整合 • 個人知識庫管理</p>
+    <main class="main">
+        <div class="container">
+            <!-- Input Section -->
+            <section class="input-section">
+                <h2>📚 建立新筆記</h2>
+                
+                <!-- Course Info -->
+                <div class="course-info">
+                    <div class="form-group">
+                        <label for="note-title">📝 筆記標題</label>
+                        <input type="text" id="note-title" placeholder="輸入筆記標題...">
                     </div>
                     
-                    <div class="welcome-stats">
-                        <div class="stat-card">
-                            <i class="fas fa-sticky-note"></i>
-                            <div class="stat-info">
-                                <span class="stat-number">0</span>
-                                <span class="stat-label">筆記</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <i class="fas fa-layer-group"></i>
-                            <div class="stat-info">
-                                <span class="stat-number">0</span>
-                                <span class="stat-label">記憶卡集</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <i class="fas fa-question-circle"></i>
-                            <div class="stat-info">
-                                <span class="stat-number">0</span>
-                                <span class="stat-label">測驗集</span>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <i class="fas fa-paint-brush"></i>
-                            <div class="stat-info">
-                                <span class="stat-number">0</span>
-                                <span class="stat-label">畫板</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="welcome-actions">
-                        <button class="welcome-action-btn primary" onclick="openNewNoteModal()">
-                            <i class="fas fa-plus"></i>
-                            <span>建立第一個筆記</span>
-                        </button>
-                        <button class="welcome-action-btn" onclick="showTutorial()">
-                            <i class="fas fa-play"></i>
-                            <span>觀看教學影片</span>
-                        </button>
-                    </div>
-
-                    <div class="recent-activity">
-                        <h3>📚 開始您的學習之旅</h3>
-                        <div class="activity-grid">
-                            <div class="activity-item">
-                                <i class="fas fa-youtube"></i>
-                                <div>
-                                    <h4>YouTube 影片轉筆記</h4>
-                                    <p>從教學影片快速生成結構化筆記</p>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <i class="fas fa-file-pdf"></i>
-                                <div>
-                                    <h4>PDF 文件處理</h4>
-                                    <p>上傳教科書、論文自動提取要點</p>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <i class="fas fa-brain"></i>
-                                <div>
-                                    <h4>AI 智能整合</h4>
-                                    <p>多源內容智能整合成完整知識體系</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Notes List View -->
-            <div id="notes-list-view" class="content-view" style="display: none;">
-                <div class="view-header">
-                    <h2><i class="fas fa-sticky-note"></i> 全部筆記</h2>
-                    <div class="view-actions">
-                        <button class="action-btn" onclick="openNewNoteModal()">
-                            <i class="fas fa-plus"></i> 新增筆記
-                        </button>
-                        <div class="search-box">
-                            <input type="text" placeholder="搜尋筆記..." />
-                            <i class="fas fa-search"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="notes-grid" id="notes-grid">
-                    <!-- Notes will be populated here -->
-                </div>
-            </div>
-
-            <!-- Flashcard Sets View -->
-            <div id="flashcard-sets-view" class="content-view" style="display: none;">
-                <div class="view-header">
-                    <h2><i class="fas fa-layer-group"></i> 記憶卡集</h2>
-                    <div class="view-actions">
-                        <button class="action-btn" onclick="openNewFlashcardSetModal()">
-                            <i class="fas fa-plus"></i> 新增卡集
-                        </button>
-                    </div>
-                </div>
-                <div class="flashcard-sets-grid" id="flashcard-sets-grid">
-                    <!-- Flashcard sets will be populated here -->
-                </div>
-            </div>
-
-            <!-- Quiz Sets View -->
-            <div id="quiz-sets-view" class="content-view" style="display: none;">
-                <div class="view-header">
-                    <h2><i class="fas fa-question-circle"></i> 測驗集</h2>
-                    <div class="view-actions">
-                        <button class="action-btn" onclick="openNewQuizSetModal()">
-                            <i class="fas fa-plus"></i> 新增測驗
-                        </button>
-                    </div>
-                </div>
-                <div class="quiz-sets-grid" id="quiz-sets-grid">
-                    <!-- Quiz sets will be populated here -->
-                </div>
-            </div>
-
-            <!-- Canvas View -->
-            <div id="canvas-view" class="content-view" style="display: none;">
-                <div class="view-header">
-                    <h2><i class="fas fa-paint-brush"></i> 協作畫板</h2>
-                    <div class="view-actions">
-                        <button class="action-btn" onclick="openNewCanvas()">
-                            <i class="fas fa-plus"></i> 新增畫板
-                        </button>
-                    </div>
-                </div>
-                <div class="canvas-container" id="canvas-container">
-                    <!-- Canvas will be populated here -->
-                </div>
-            </div>
-
-            <div class="container">
-            <!-- Modern Unified Input Section (Hidden by default, shown in modal) -->
-            <section class="unified-input-section">
-                <!-- Enhanced Course and Exam Selection -->
-                <div class="course-header">
-                    <div class="classification-section">
-                        <h3>📚 課程分類</h3>
-                        
-                        <!-- Exam System Selection -->
-                        <div class="selection-group">
-                            <label for="exam-system-select">🎓 考試系統：</label>
-                            <select id="exam-system-select" class="classification-dropdown">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="exam-system">🎓 考試系統</label>
+                            <select id="exam-system">
                                 <option value="">選擇考試系統...</option>
-                                <optgroup label="🌍 國際課程">
-                                    <option value="ibdp">🏅 IB Diploma Programme</option>
-                                    <option value="ial">📜 International A Level (IAL)</option>
-                                    <option value="ias">📋 International AS Level (IAS)</option>
-                                    <option value="al">🏆 A Level</option>
-                                    <option value="as">⭐ AS Level</option>
-                                </optgroup>
-                                <optgroup label="🏫 英式課程">
-                                    <option value="gcse">📖 GCSE</option>
-                                    <option value="igcse">🌐 IGCSE</option>
-                                </optgroup>
-                                <optgroup label="🇺🇸 美式課程">
-                                    <option value="ap">🎓 Advanced Placement (AP)</option>
-                                    <option value="sat">✏️ SAT</option>
-                                </optgroup>
-                                <optgroup label="🇭🇰 香港課程">
-                                    <option value="hkdse">🎯 HKDSE</option>
-                                </optgroup>
-                                <optgroup label="🗣️ 語言測試">
-                                    <option value="ielts">🎤 IELTS</option>
-                                    <option value="toefl">🎧 TOEFL</option>
-                                </optgroup>
-                                <optgroup label="📋 其他">
-                                    <option value="other-exam">📝 其他考試</option>
-                                    <option value="self-study">📚 自主學習</option>
-                                </optgroup>
+                                <option value="hkdse">🇭🇰 HKDSE</option>
+                                <option value="ial">📜 International A Level</option>
+                                <option value="ap">🇺🇸 AP</option>
+                                <option value="ib">🌍 IB</option>
+                                <option value="gcse">🇬🇧 GCSE</option>
+                                <option value="other">📋 其他</option>
                             </select>
                         </div>
-
-                        <!-- Subject Selection -->
-                        <div class="selection-group">
-                            <label for="subject-select">📖 科目：</label>
-                            <select id="subject-select" class="classification-dropdown">
+                        
+                        <div class="form-group">
+                            <label for="subject">📖 科目</label>
+                            <select id="subject">
                                 <option value="">選擇科目...</option>
-                                <optgroup label="🧪 科學">
-                                    <option value="chemistry">⚗️ 化學 Chemistry</option>
-                                    <option value="physics">🔬 物理 Physics</option>
-                                    <option value="biology">🧬 生物 Biology</option>
-                                    <option value="environmental-science">🌱 環境科學</option>
-                                </optgroup>
-                                <optgroup label="📊 數學">
-                                    <option value="pure-mathematics">∞ 純數學</option>
-                                    <option value="applied-mathematics">📈 應用數學</option>
-                                    <option value="statistics">📊 統計學</option>
-                                    <option value="further-mathematics">🔢 進階數學</option>
-                                </optgroup>
-                                <optgroup label="💻 技術">
-                                    <option value="computer-science">💻 計算機科學</option>
-                                    <option value="information-technology">🖥️ 資訊科技</option>
-                                    <option value="engineering">⚙️ 工程學</option>
-                                </optgroup>
-                                <optgroup label="🏛️ 人文社科">
-                                    <option value="history">📜 歷史</option>
-                                    <option value="geography">🗺️ 地理</option>
-                                    <option value="economics">💰 經濟學</option>
-                                    <option value="business-studies">💼 商業研究</option>
-                                    <option value="psychology">🧠 心理學</option>
-                                </optgroup>
-                                <optgroup label="🎨 藝術語言">
-                                    <option value="english-literature">📖 英語文學</option>
-                                    <option value="chinese">🇨🇳 中文</option>
-                                    <option value="art-design">🎨 藝術設計</option>
-                                    <option value="music">🎵 音樂</option>
-                                    <option value="drama">🎭 戲劇</option>
-                                </optgroup>
-                                <optgroup label="🌐 語言">
-                                    <option value="english">🇬🇧 英語</option>
-                                    <option value="mandarin">🇨🇳 普通話</option>
-                                    <option value="cantonese">🇭🇰 粵語</option>
-                                    <option value="french">🇫🇷 法語</option>
-                                    <option value="spanish">🇪🇸 西班牙語</option>
-                                    <option value="german">🇩🇪 德語</option>
-                                    <option value="japanese">🇯🇵 日語</option>
-                                </optgroup>
-                                <optgroup label="📋 其他">
-                                    <option value="other-subject">📚 其他科目</option>
-                                </optgroup>
+                                <option value="chemistry">⚗️ 化學</option>
+                                <option value="physics">🔬 物理</option>
+                                <option value="biology">🧬 生物</option>
+                                <option value="math">📐 數學</option>
+                                <option value="english">📚 英文</option>
+                                <option value="chinese">🈶 中文</option>
+                                <option value="other">📋 其他</option>
                             </select>
                         </div>
-
-                        <!-- Topic/Chapter Selection (Dynamic) -->
-                        <div class="selection-group" id="topic-selection" style="display: none;">
-                            <label for="topic-select">📚 主題/章節：</label>
-                            <select id="topic-select" class="classification-dropdown">
-                                <option value="">選擇主題...</option>
-                                <!-- Topics will be populated dynamically based on subject -->
-                            </select>
-                        </div>
-
-                        <!-- Custom Topic Input -->
-                        <div class="selection-group">
-                            <label for="custom-topic-input">✏️ 自定義主題 (可選)：</label>
-                            <input type="text" id="custom-topic-input" class="topic-input" placeholder="例如：有機化學 - 烷烴反應">
+                        
+                        <div class="form-group">
+                            <label for="topic">📚 主題</label>
+                            <input type="text" id="topic" placeholder="例如：有機化學">
                         </div>
                     </div>
+                </div>
+
+                <!-- Source Inputs -->
+                <div class="sources-section">
+                    <h3>📤 學習資源</h3>
                     
-                    <div class="note-title">
-                        <label for="note-title-input">📝 筆記標題：</label>
-                        <input type="text" id="note-title-input" class="title-input" placeholder="輸入筆記標題...">
+                    <div class="source-tabs">
+                        <button class="tab-btn active" data-tab="youtube">
+                            <i class="fab fa-youtube"></i> YouTube
+                        </button>
+                        <button class="tab-btn" data-tab="text">
+                            <i class="fas fa-align-left"></i> 文字內容
+                        </button>
+                        <button class="tab-btn" data-tab="file">
+                            <i class="fas fa-file"></i> 文件上傳
+                        </button>
+                        <button class="tab-btn" data-tab="webpage">
+                            <i class="fas fa-globe"></i> 網頁連結
+                        </button>
+                    </div>
+
+                    <!-- YouTube Tab -->
+                    <div id="youtube-tab" class="tab-content active">
+                        <div class="input-group">
+                            <input type="text" id="youtube-url" placeholder="貼上 YouTube 影片連結...">
+                            <button type="button" id="add-youtube-btn">
+                                <i class="fas fa-plus"></i> 新增
+                            </button>
+                        </div>
+                        <div id="youtube-list" class="source-list"></div>
+                    </div>
+
+                    <!-- Text Tab -->
+                    <div id="text-tab" class="tab-content">
+                        <div class="input-group">
+                            <textarea id="text-content" rows="4" placeholder="貼上或輸入學習內容..."></textarea>
+                            <button type="button" id="add-text-btn">
+                                <i class="fas fa-plus"></i> 新增
+                            </button>
+                        </div>
+                        <div id="text-list" class="source-list"></div>
+                    </div>
+
+                    <!-- File Tab -->
+                    <div id="file-tab" class="tab-content">
+                        <div class="file-upload">
+                            <input type="file" id="file-input" multiple accept=".pdf,.doc,.docx,.txt">
+                            <label for="file-input" class="file-upload-label">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <span>點擊選擇文件或拖拽到此處</span>
+                                <small>支援 PDF, DOC, DOCX, TXT</small>
+                            </label>
+                        </div>
+                        <div id="file-list" class="source-list"></div>
+                    </div>
+
+                    <!-- Webpage Tab -->
+                    <div id="webpage-tab" class="tab-content">
+                        <div class="input-group">
+                            <input type="text" id="webpage-url" placeholder="貼上網頁連結...">
+                            <button type="button" id="add-webpage-btn">
+                                <i class="fas fa-plus"></i> 新增
+                            </button>
+                        </div>
+                        <div id="webpage-list" class="source-list"></div>
                     </div>
                 </div>
 
-                <!-- Upload Sources Area -->
-                <div class="upload-sources-area">
-                    <h3>📤 上傳學習資源</h3>
-                    <div class="sources-container">
-                        <!-- YouTube Sources -->
-                        <div class="source-group">
-                            <div class="source-header">
-                                <i class="fab fa-youtube youtube-icon"></i>
-                                <span>YouTube 影片</span>
-                                <button class="add-source-btn" data-type="youtube">+ 添加</button>
-                            </div>
-                            <div id="youtube-sources" class="sources-list">
-                                <div class="source-item">
-                                    <input type="text" class="youtube-url-input" placeholder="貼上 YouTube 影片網址...">
-                                    <button class="remove-source-btn">×</button>
-                                </div>
+                <!-- Settings -->
+                <div class="settings-section">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>🎯 詳細程度</label>
+                            <div class="radio-group">
+                                <label><input type="radio" name="detail" value="brief"> 簡要</label>
+                                <label><input type="radio" name="detail" value="medium" checked> 適中</label>
+                                <label><input type="radio" name="detail" value="detailed"> 詳細</label>
                             </div>
                         </div>
-
-                        <!-- File Sources -->
-                        <div class="source-group">
-                            <div class="source-header">
-                                <i class="fas fa-file-upload file-icon"></i>
-                                <span>文件上傳</span>
-                                <button class="add-source-btn" data-type="file">+ 添加</button>
-                            </div>
-                            <div class="file-upload-zone">
-                                <input type="file" id="file-input" multiple accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.mp3,.m4a,.wav,.jpg,.jpeg,.png" hidden>
-                                <label for="file-input" class="file-drop-area">
-                                    <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                    <div class="upload-text">
-                                        <strong>點擊選擇文件或拖放到此處</strong>
-                                        <p>支援：PDF, DOC, PPT, TXT, MD, MP3, M4A, WAV, 圖片</p>
-                                    </div>
-                                </label>
-                                <div id="file-list" class="file-list"></div>
-                            </div>
-                        </div>
-
-                        <!-- Text Sources -->
-                        <div class="source-group">
-                            <div class="source-header">
-                                <i class="fas fa-align-left text-icon"></i>
-                                <span>文字內容</span>
-                                <button class="add-source-btn" data-type="text">+ 添加</button>
-                            </div>
-                            <div id="text-sources" class="sources-list">
-                                <div class="source-item">
-                                    <textarea class="text-content-input" placeholder="貼上或輸入文字內容..." rows="4"></textarea>
-                                    <button class="remove-source-btn">×</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Webpage Sources -->
-                        <div class="source-group">
-                            <div class="source-header">
-                                <i class="fas fa-globe web-icon"></i>
-                                <span>網頁連結</span>
-                                <button class="add-source-btn" data-type="webpage">+ 添加</button>
-                            </div>
-                            <div id="webpage-sources" class="sources-list">
-                                <div class="source-item">
-                                    <input type="text" class="webpage-url-input" placeholder="貼上網頁連結...">
-                                    <button class="remove-source-btn">×</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Settings Section -->
-                <div class="generation-settings">
-                    <div class="settings-row">
-                        <!-- Detail Level -->
-                        <div class="setting-group">
-                            <label>🎯 詳細程度：</label>
-                            <div class="detail-buttons">
-                                <button class="detail-btn" data-level="brief">簡要</button>
-                                <button class="detail-btn active" data-level="medium">適中</button>
-                                <button class="detail-btn" data-level="detailed">詳細</button>
-                            </div>
-                        </div>
-
-                        <!-- Language Selection -->
-                        <div class="setting-group">
-                            <label>🌐 輸出語言：</label>
-                            <div class="language-buttons">
-                                <button class="lang-btn" data-lang="en">English</button>
-                                <button class="lang-btn" data-lang="zh-cn">简体中文</button>
-                                <button class="lang-btn active" data-lang="zh-tw">繁體中文</button>
+                        
+                        <div class="form-group">
+                            <label>🌐 語言</label>
+                            <div class="radio-group">
+                                <label><input type="radio" name="language" value="zh-tw" checked> 繁體中文</label>
+                                <label><input type="radio" name="language" value="zh-cn"> 简体中文</label>
+                                <label><input type="radio" name="language" value="en"> English</label>
                             </div>
                         </div>
                     </div>
@@ -425,326 +171,96 @@
 
                 <!-- Generate Button -->
                 <div class="generate-section">
-                    <button id="generate-unified-notes" class="generate-mega-btn">
+                    <button id="generate-btn" class="generate-btn">
                         <i class="fas fa-magic"></i>
-                        <span>🚀 生成統一學習筆記</span>
-                        <small>整合所有資源生成完整筆記</small>
+                        <span>生成筆記</span>
                     </button>
                 </div>
             </section>
 
-            <!-- Loading Indicator -->
-            <div id="loading" class="loading" style="display:none;">
+            <!-- Loading -->
+            <div id="loading" class="loading" style="display: none;">
                 <div class="spinner"></div>
-                <p>AI正在生成筆記，請稍候...</p>
+                <p>AI 正在生成筆記，請稍候...</p>
             </div>
 
             <!-- Output Section -->
-            <section id="output-section" class="output-section">
-                <!-- View Toggle -->
-                <div class="view-toggle">
-                    <button class="view-btn active" data-view="notes">
+            <section id="output-section" class="output-section" style="display: none;">
+                <h2>📖 生成結果</h2>
+                
+                <!-- View Tabs -->
+                <div class="view-tabs">
+                    <button class="view-tab active" data-view="notes">
                         <i class="fas fa-sticky-note"></i> 筆記
                     </button>
-                    <button class="view-btn" data-view="mindmap">
+                    <button class="view-tab" data-view="mindmap">
                         <i class="fas fa-project-diagram"></i> 思維導圖
                     </button>
-                    <button class="view-btn" data-view="flashcards">
+                    <button class="view-tab" data-view="flashcards">
                         <i class="fas fa-layer-group"></i> 記憶卡片
                     </button>
-                    <button class="view-btn" data-view="quiz">
+                    <button class="view-tab" data-view="quiz">
                         <i class="fas fa-question-circle"></i> 測驗
-                    </button>
-                </div>
-
-                <!-- Enhanced Action Buttons -->
-                <div class="action-buttons">
-                    <!-- Language Switch -->
-                    <div class="language-switch-group">
-                        <label>🌐 切換語言：</label>
-                        <button id="switch-to-en" class="lang-switch-btn" data-lang="en">English</button>
-                        <button id="switch-to-zh-cn" class="lang-switch-btn" data-lang="zh-cn">简体</button>
-                        <button id="switch-to-zh-tw" class="lang-switch-btn active" data-lang="zh-tw">繁體</button>
-                    </div>
-                    
-                    <!-- Edit Mode Toggle -->
-                    <button id="edit-mode-btn" class="action-btn edit-btn">
-                        <i class="fas fa-edit"></i> 編輯模式
-                    </button>
-                    
-                    <!-- Standard Actions -->
-                    <button id="download-btn" class="action-btn">
-                        <i class="fas fa-download"></i> 下載
-                    </button>
-                    <button id="copy-btn" class="action-btn">
-                        <i class="fas fa-copy"></i> 複製
-                    </button>
-                    <button id="save-btn" class="action-btn">
-                        <i class="fas fa-save"></i> 儲存
                     </button>
                 </div>
 
                 <!-- Notes View -->
                 <div id="notes-view" class="view-content active">
-                    <!-- Read Mode -->
-                    <div id="notes-read-mode" class="notes-read-mode">
-                        <div id="notes-content" class="notes-content"></div>
-                    </div>
-                    
-                    <!-- Edit Mode -->
-                    <div id="notes-edit-mode" class="notes-edit-mode" style="display: none;">
-                        <div class="edit-toolbar">
-                            <button id="save-edit-btn" class="toolbar-btn save-btn">
-                                <i class="fas fa-save"></i> 保存更改
-                            </button>
-                            <button id="cancel-edit-btn" class="toolbar-btn cancel-btn">
-                                <i class="fas fa-times"></i> 取消
-                            </button>
-                            <div class="edit-help">
-                                <i class="fas fa-info-circle"></i>
-                                支援 Markdown 格式編輯
-                            </div>
-                        </div>
-                        <textarea id="notes-editor" class="notes-editor" placeholder="在此編輯您的筆記內容..."></textarea>
-                        <div class="edit-preview">
-                            <h4>預覽：</h4>
-                            <div id="edit-preview-content" class="preview-content"></div>
-                        </div>
+                    <div class="content-box">
+                        <div id="notes-content"></div>
                     </div>
                 </div>
 
                 <!-- Mindmap View -->
                 <div id="mindmap-view" class="view-content">
-                    <div id="mindmap-container" class="mindmap-container">
-                        <svg id="mindmap-svg"></svg>
+                    <div class="content-box">
+                        <div id="mindmap-container">
+                            <svg id="mindmap-svg"></svg>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Flashcards View -->
                 <div id="flashcards-view" class="view-content">
-                    <div id="flashcards-container" class="flashcards-container"></div>
+                    <div class="content-box">
+                        <div class="flashcards-header">
+                            <button id="generate-flashcards-btn" class="action-btn">
+                                <i class="fas fa-magic"></i> 生成記憶卡片
+                            </button>
+                        </div>
+                        <div id="flashcards-container"></div>
+                    </div>
                 </div>
 
                 <!-- Quiz View -->
                 <div id="quiz-view" class="view-content">
-                    <div id="quiz-container" class="quiz-container"></div>
+                    <div class="content-box">
+                        <div class="quiz-header">
+                            <button id="generate-quiz-btn" class="action-btn">
+                                <i class="fas fa-magic"></i> 生成測驗
+                            </button>
+                        </div>
+                        <div id="quiz-container"></div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-buttons">
+                    <button id="download-btn" class="action-btn">
+                        <i class="fas fa-download"></i> 下載
+                    </button>
+                    <button id="save-btn" class="action-btn">
+                        <i class="fas fa-save"></i> 儲存
+                    </button>
+                    <button id="copy-btn" class="action-btn">
+                        <i class="fas fa-copy"></i> 複製
+                    </button>
                 </div>
             </section>
         </div>
     </main>
 
-    <!-- New Note Creation Modal -->
-    <div id="new-note-modal" class="modal" style="display: none;">
-        <div class="modal-content large-modal">
-            <div class="modal-header">
-                <h2><i class="fas fa-plus"></i> 建立新筆記</h2>
-                <button class="modal-close" onclick="closeNewNoteModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <!-- The unified input section will be moved here via JS -->
-                <div id="modal-unified-input"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Flashcard Set Creation Modal -->
-    <div id="flashcard-set-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-layer-group"></i> 建立記憶卡集</h2>
-                <button class="modal-close" onclick="closeFlashcardSetModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="flashcard-creation">
-                    <div class="creation-options">
-                        <div class="option-card active" data-mode="ai-generate">
-                            <i class="fas fa-robot"></i>
-                            <h3>AI 自動生成</h3>
-                            <p>從筆記內容自動生成記憶卡片</p>
-                        </div>
-                        <div class="option-card" data-mode="manual-create">
-                            <i class="fas fa-hand-paper"></i>
-                            <h3>手動建立</h3>
-                            <p>自己設計卡片內容和答案</p>
-                        </div>
-                        <div class="option-card" data-mode="hybrid">
-                            <i class="fas fa-balance-scale"></i>
-                            <h3>混合模式</h3>
-                            <p>AI 生成後可編輯調整</p>
-                        </div>
-                    </div>
-
-                    <!-- AI Generation Settings -->
-                    <div id="ai-generate-mode" class="creation-mode active">
-                        <div class="source-selection">
-                            <label>選擇筆記來源：</label>
-                            <select id="note-source-select" class="form-select">
-                                <option value="">選擇現有筆記...</option>
-                            </select>
-                        </div>
-                        
-                        <div class="generation-settings">
-                            <div class="setting-group">
-                                <label>卡片數量：</label>
-                                <select id="card-count" class="form-select">
-                                    <option value="10">10張</option>
-                                    <option value="20" selected>20張</option>
-                                    <option value="30">30張</option>
-                                </select>
-                            </div>
-                            
-                            <div class="setting-group">
-                                <label>難度等級：</label>
-                                <div class="difficulty-buttons">
-                                    <button class="difficulty-btn" data-level="easy">簡單</button>
-                                    <button class="difficulty-btn active" data-level="medium">適中</button>
-                                    <button class="difficulty-btn" data-level="hard">困難</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="ai-options">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="allow-editing" checked>
-                                <span>✅ 生成後允許編輯</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="save-unedited">
-                                <span>💾 保留 AI 原始版本</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button class="btn-secondary" onclick="closeFlashcardSetModal()">取消</button>
-                    <button class="btn-primary" onclick="createFlashcardSet()">
-                        <i class="fas fa-magic"></i> 建立記憶卡集
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Quiz Set Creation Modal -->
-    <div id="quiz-set-modal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-question-circle"></i> 建立測驗集</h2>
-                <button class="modal-close" onclick="closeQuizSetModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="quiz-creation">
-                    <div class="quiz-settings">
-                        <div class="setting-row">
-                            <div class="setting-group">
-                                <label>題目數量：</label>
-                                <select id="quiz-count" class="form-select">
-                                    <option value="5">5題</option>
-                                    <option value="10" selected>10題</option>
-                                    <option value="15">15題</option>
-                                </select>
-                            </div>
-                            
-                            <div class="setting-group">
-                                <label>來源筆記：</label>
-                                <select id="quiz-source-select" class="form-select">
-                                    <option value="">選擇筆記...</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="quiz-options">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="quiz-allow-editing" checked>
-                                <span>允許生成後編輯題目</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="quiz-save-original">
-                                <span>保留 AI 原始版本</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-actions">
-                    <button class="btn-secondary" onclick="closeQuizSetModal()">取消</button>
-                    <button class="btn-primary" onclick="createQuizSet()">
-                        <i class="fas fa-magic"></i> 建立測驗集
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Canvas/Whiteboard Modal -->
-    <div id="canvas-modal" class="modal" style="display: none;">
-        <div class="modal-content large-modal">
-            <div class="modal-header">
-                <h2><i class="fas fa-paint-brush"></i> 協作畫板</h2>
-                <button class="modal-close" onclick="closeCanvasModal()">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="modal-body">
-                <div class="canvas-workspace">
-                    <div class="canvas-toolbar">
-                        <div class="tool-group">
-                            <button class="tool-btn active" data-tool="pen">
-                                <i class="fas fa-pen"></i> 筆
-                            </button>
-                            <button class="tool-btn" data-tool="eraser">
-                                <i class="fas fa-eraser"></i> 橡皮擦
-                            </button>
-                            <button class="tool-btn" data-tool="text">
-                                <i class="fas fa-font"></i> 文字
-                            </button>
-                        </div>
-                        
-                        <div class="tool-group">
-                            <input type="color" id="color-picker" value="#000000">
-                            <input type="range" id="brush-size" min="1" max="20" value="3">
-                        </div>
-                        
-                        <div class="tool-group">
-                            <button class="tool-btn" onclick="clearCanvas()">
-                                <i class="fas fa-trash"></i> 清除
-                            </button>
-                            <button class="tool-btn" onclick="saveCanvas()">
-                                <i class="fas fa-save"></i> 保存
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div class="canvas-area">
-                        <canvas id="whiteboard-canvas" width="800" height="600"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 NexLearn. All rights reserved.</p>
-        </div>
-    </footer>
-
     <!-- JavaScript -->
     <script src="js/app.js"></script>
-    <script src="js/mindmap.js"></script>
-    <script src="js/sidebar.js"></script>
-    <script src="js/modals.js"></script>
-    <script src="js/flashcards.js"></script>
-    <script src="js/quizzes.js"></script>
-    <script src="js/canvas.js"></script>
-    <script src="js/trilium-tree.js"></script>
 </body>
 </html>

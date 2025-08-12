@@ -1,52 +1,41 @@
-// Global variables
+// NexLearn AI Notes - Simple and Clean Frontend
+// API Base URL
+const API_BASE_URL = 'http://localhost:5000/api';
+
+// Global state
 let currentNotes = '';
 let currentFlashcards = [];
 let currentQuiz = [];
 
-// API Base URL
-const API_BASE_URL = 'http://localhost:5000/api';
-
-// Initialize when DOM is loaded
+// Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize old system (for backward compatibility)
-    if (document.querySelector('.tab-btn')) {
-        initializeTabs();
-        initializeEventListeners();
-    }
+    console.log('🚀 NexLearn AI Notes initialized');
     
-    // Always initialize view toggle for output section
-    initializeViewToggle();
+    // Initialize all components
+    initializeTabs();
+    initializeSourceManagement();
+    initializeGeneration();
+    initializeViewTabs();
+    initializeActions();
     
-    // Initialize new unified system
-    console.log('NexLearn AI Notes initialized with new UI system');
-    
-    // Initialize unified note generation
-    initializeUnifiedNoteGeneration();
-    
-    // Initialize sidebar buttons
-    initializeSidebarButtons();
-    
-    // Dispatch note generation events for flashcard integration
-    window.dispatchNoteGenerated = function(noteData) {
-        const event = new CustomEvent('noteGenerated', {
-            detail: { noteData: noteData }
-        });
-        document.dispatchEvent(event);
-    };
+    console.log('✅ All components initialized');
 });
 
-// Initialize tabs
+// =====================================================
+// TAB MANAGEMENT
+// =====================================================
+
 function initializeTabs() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabContents = document.querySelectorAll('.tab-content');
     
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            // Remove active class from all
+            // Remove active from all
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
             
-            // Add active class to clicked
+            // Add active to clicked
             btn.classList.add('active');
             const tabId = btn.dataset.tab + '-tab';
             document.getElementById(tabId).classList.add('active');
@@ -54,566 +43,197 @@ function initializeTabs() {
     });
 }
 
-// Initialize event listeners
-function initializeEventListeners() {
-    // YouTube submit
-    document.getElementById('youtube-submit').addEventListener('click', handleYouTubeSubmit);
-    
-    // PDF upload
-    const pdfInput = document.getElementById('pdf-file');
-    pdfInput.addEventListener('change', handleFileSelect);
-    document.getElementById('pdf-submit').addEventListener('click', handlePDFSubmit);
-    
-    // Text submit
-    document.getElementById('text-submit').addEventListener('click', handleTextSubmit);
-    
-    // Action buttons
-    document.getElementById('download-btn').addEventListener('click', handleDownload);
-    document.getElementById('copy-btn').addEventListener('click', handleCopy);
-    document.getElementById('save-btn').addEventListener('click', handleSave);
-    
-    // Enter key for YouTube URL
-    document.getElementById('youtube-url').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleYouTubeSubmit();
-    });
-}
-
-// Initialize view toggle
-function initializeViewToggle() {
-    const viewBtns = document.querySelectorAll('.view-btn');
+function initializeViewTabs() {
+    const viewTabs = document.querySelectorAll('.view-tab');
     const viewContents = document.querySelectorAll('.view-content');
     
-    viewBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            // Remove active class from all
-            viewBtns.forEach(b => b.classList.remove('active'));
+    viewTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            // Remove active from all
+            viewTabs.forEach(t => t.classList.remove('active'));
             viewContents.forEach(c => c.classList.remove('active'));
             
-            // Add active class to clicked
-            btn.classList.add('active');
-            const viewId = btn.dataset.view + '-view';
+            // Add active to clicked
+            tab.classList.add('active');
+            const viewId = tab.dataset.view + '-view';
             document.getElementById(viewId).classList.add('active');
             
-            // Load content for specific views
-            if (btn.dataset.view === 'mindmap' && window.currentNotes) {
-                renderMindmap(window.currentNotes);
-            } else if (btn.dataset.view === 'flashcards' && window.currentNotes && (!window.currentFlashcards || window.currentFlashcards.length === 0)) {
-                generateFlashcards();
-            } else if (btn.dataset.view === 'quiz' && window.currentNotes && (!window.currentQuiz || window.currentQuiz.length === 0)) {
-                generateQuiz();
+            // Load content if needed
+            if (tab.dataset.view === 'mindmap' && currentNotes) {
+                renderMindmap(currentNotes);
             }
         });
     });
 }
 
-// Handle YouTube submit
-async function handleYouTubeSubmit() {
-    const url = document.getElementById('youtube-url').value.trim();
+// =====================================================
+// SOURCE MANAGEMENT
+// =====================================================
+
+function initializeSourceManagement() {
+    // YouTube
+    document.getElementById('add-youtube-btn').addEventListener('click', addYouTubeSource);
+    document.getElementById('youtube-url').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addYouTubeSource();
+    });
+    
+    // Text
+    document.getElementById('add-text-btn').addEventListener('click', addTextSource);
+    
+    // File
+    document.getElementById('file-input').addEventListener('change', handleFileUpload);
+    
+    // Webpage
+    document.getElementById('add-webpage-btn').addEventListener('click', addWebpageSource);
+    document.getElementById('webpage-url').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') addWebpageSource();
+    });
+}
+
+function addYouTubeSource() {
+    const input = document.getElementById('youtube-url');
+    const url = input.value.trim();
     
     if (!url) {
-        alert('請輸入YouTube網址');
+        alert('請輸入 YouTube 連結');
         return;
     }
     
-    const detailLevel = document.querySelector('input[name="detail"]:checked').value;
-    const language = document.querySelector('input[name="language"]:checked').value;
-    
-    showLoading();
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/youtube-to-notes`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                youtube_url: url,
-                detail_level: detailLevel,
-                language: language
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        
-        displayNotes(data.notes);
-        currentNotes = data.notes;
-        
-    } catch (error) {
-        alert('錯誤：' + error.message);
-    } finally {
-        hideLoading();
-    }
-}
-
-// Handle PDF submit
-async function handlePDFSubmit() {
-    const fileInput = document.getElementById('pdf-file');
-    const file = fileInput.files[0];
-    
-    if (!file) {
-        alert('請選擇PDF文件');
+    if (!isValidYouTubeUrl(url)) {
+        alert('請輸入有效的 YouTube 連結');
         return;
     }
     
-    const detailLevel = document.querySelector('input[name="detail"]:checked').value;
-    const language = document.querySelector('input[name="language"]:checked').value;
+    addSourceItem('youtube-list', {
+        type: 'youtube',
+        url: url,
+        title: 'YouTube 影片',
+        data: url
+    });
     
-    showLoading();
-    
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('detail_level', detailLevel);
-        formData.append('language', language);
-        
-        const response = await fetch(`${API_BASE_URL}/pdf-to-notes`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        
-        displayNotes(data.notes);
-        currentNotes = data.notes;
-        
-    } catch (error) {
-        alert('錯誤：' + error.message);
-    } finally {
-        hideLoading();
-    }
+    input.value = '';
 }
 
-// Handle text submit
-async function handleTextSubmit() {
-    const text = document.getElementById('text-input').value.trim();
+function addTextSource() {
+    const textarea = document.getElementById('text-content');
+    const content = textarea.value.trim();
     
-    if (!text) {
+    if (!content) {
         alert('請輸入文字內容');
         return;
     }
     
-    const detailLevel = document.querySelector('input[name="detail"]:checked').value;
-    const language = document.querySelector('input[name="language"]:checked').value;
-    
-    showLoading();
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/text-to-notes`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                text: text,
-                detail_level: detailLevel,
-                language: language
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        
-        displayNotes(data.notes);
-        currentNotes = data.notes;
-        
-    } catch (error) {
-        alert('錯誤：' + error.message);
-    } finally {
-        hideLoading();
-    }
-}
-
-// Handle file select
-function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-        document.getElementById('file-name').textContent = `已選擇：${file.name}`;
-        document.getElementById('pdf-submit').style.display = 'block';
-    }
-}
-
-// Display notes
-function displayNotes(notes) {
-    // Convert markdown to HTML
-    const html = marked.parse(notes);
-    document.getElementById('notes-content').innerHTML = html;
-    
-    // Show output section
-    document.getElementById('output-section').style.display = 'block';
-    
-    // Reset other views
-    currentFlashcards = [];
-    currentQuiz = [];
-    document.getElementById('flashcards-container').innerHTML = '';
-    document.getElementById('quiz-container').innerHTML = '';
-}
-
-// Generate flashcards
-async function generateFlashcards() {
-    if (!window.currentNotes) return;
-    
-    // Show loading in flashcards container
-    const container = document.getElementById('flashcards-container');
-    if (container) {
-        container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> 生成記憶卡中...</div>';
-    }
-    
-    try {
-        const selectedLanguage = document.querySelector('input[name="language"]:checked')?.value || 'zh-tw';
-        
-        const response = await fetch(`${API_BASE_URL}/generate-flashcards`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                note_content: window.currentNotes,
-                count: 15,
-                difficulty: 'medium',
-                types: ['definition', 'example'],
-                language: selectedLanguage
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        
-        window.currentFlashcards = data.flashcards;
-        displayFlashcards();
-        
-    } catch (error) {
-        const container = document.getElementById('flashcards-container');
-        if (container) {
-            container.innerHTML = '<div class="error-state">生成記憶卡失敗：' + error.message + '</div>';
-        }
-    }
-}
-
-// Display flashcards
-function displayFlashcards() {
-    const container = document.getElementById('flashcards-container');
-    container.innerHTML = '';
-    
-    if (!window.currentFlashcards || window.currentFlashcards.length === 0) {
-        container.innerHTML = '<div class="empty-state">沒有記憶卡</div>';
-        return;
-    }
-    
-    window.currentFlashcards.forEach((card, index) => {
-        const cardDiv = document.createElement('div');
-        cardDiv.className = 'flashcard';
-        cardDiv.innerHTML = `
-            <div class="flashcard-question">Q: ${card.question}</div>
-            <div class="flashcard-answer">A: ${card.answer}</div>
-        `;
-        
-        cardDiv.addEventListener('click', () => {
-            cardDiv.classList.toggle('flipped');
-        });
-        
-        container.appendChild(cardDiv);
-    });
-}
-
-// Generate quiz
-async function generateQuiz() {
-    if (!window.currentNotes) return;
-    
-    // Show loading in quiz container
-    const container = document.getElementById('quiz-container');
-    if (container) {
-        container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i> 生成測驗中...</div>';
-    }
-    
-    try {
-        const selectedLanguage = document.querySelector('input[name="language"]:checked')?.value || 'zh-tw';
-        
-        const response = await fetch(`${API_BASE_URL}/generate-quiz`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                notes: window.currentNotes,
-                language: selectedLanguage
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error);
-        }
-        
-        window.currentQuiz = data.quiz;
-        displayQuiz();
-        
-    } catch (error) {
-        const container = document.getElementById('quiz-container');
-        if (container) {
-            container.innerHTML = '<div class="error-state">生成測驗失敗：' + error.message + '</div>';
-        }
-    }
-}
-
-// Display quiz
-function displayQuiz() {
-    const container = document.getElementById('quiz-container');
-    container.innerHTML = '';
-    
-    if (!window.currentQuiz || window.currentQuiz.length === 0) {
-        container.innerHTML = '<div class="empty-state">沒有測驗</div>';
-        return;
-    }
-    
-    window.currentQuiz.forEach((question, qIndex) => {
-        const questionDiv = document.createElement('div');
-        questionDiv.className = 'quiz-question';
-        
-        let optionsHtml = '';
-        question.options.forEach((option, oIndex) => {
-            optionsHtml += `
-                <div class="quiz-option" data-question="${qIndex}" data-option="${oIndex}">
-                    ${option}
-                </div>
-            `;
-        });
-        
-        questionDiv.innerHTML = `
-            <h3>問題 ${qIndex + 1}: ${question.question}</h3>
-            <div class="quiz-options">
-                ${optionsHtml}
-            </div>
-        `;
-        
-        container.appendChild(questionDiv);
+    addSourceItem('text-list', {
+        type: 'text',
+        title: '文字內容 (' + content.length + ' 字)',
+        preview: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
+        data: content
     });
     
-    // Add submit button
-    const submitBtn = document.createElement('button');
-    submitBtn.className = 'quiz-submit';
-    submitBtn.textContent = '提交答案';
-    submitBtn.addEventListener('click', checkQuizAnswers);
-    container.appendChild(submitBtn);
+    textarea.value = '';
+}
+
+function handleFileUpload(e) {
+    const files = Array.from(e.target.files);
     
-    // Add click handlers to options
-    document.querySelectorAll('.quiz-option').forEach(option => {
-        option.addEventListener('click', function() {
-            const qIndex = this.dataset.question;
-            
-            // Remove selected from other options in same question
-            document.querySelectorAll(`.quiz-option[data-question="${qIndex}"]`).forEach(opt => {
-                opt.classList.remove('selected');
+    files.forEach(file => {
+        if (isValidFileType(file)) {
+            addSourceItem('file-list', {
+                type: 'file',
+                title: file.name,
+                preview: formatFileSize(file.size),
+                data: file
             });
-            
-            this.classList.add('selected');
-        });
-    });
-}
-
-// Check quiz answers
-function checkQuizAnswers() {
-    let correct = 0;
-    
-    window.currentQuiz.forEach((question, qIndex) => {
-        const selected = document.querySelector(`.quiz-option[data-question="${qIndex}"].selected`);
-        
-        if (selected) {
-            const selectedOption = parseInt(selected.dataset.option);
-            
-            // Find correct option index - try multiple matching methods
-            let correctOption = -1;
-            
-            // Method 1: Match by letter (A, B, C, D)
-            const correctLetter = question.correct.toUpperCase().trim();
-            const letters = ['A', 'B', 'C', 'D'];
-            correctOption = letters.indexOf(correctLetter);
-            
-            // Method 2: If not found, try matching option text that starts with the letter
-            if (correctOption === -1) {
-                correctOption = question.options.findIndex(opt => 
-                    opt.trim().toUpperCase().startsWith(correctLetter + '.')
-                );
-            }
-            
-            // Method 3: If still not found, try direct text match
-            if (correctOption === -1) {
-                correctOption = question.options.findIndex(opt => 
-                    opt.trim().toUpperCase().includes(correctLetter)
-                );
-            }
-            
-            // Fallback: default to first option if nothing found
-            if (correctOption === -1) {
-                correctOption = 0;
-            }
-            
-            console.log(`Question ${qIndex}: Selected=${selectedOption}, Correct=${correctOption}, Letter=${correctLetter}`);
-            
-            if (selectedOption === correctOption) {
-                selected.classList.add('correct');
-                correct++;
-            } else {
-                selected.classList.add('incorrect');
-                // Show correct answer
-                const correctElement = document.querySelector(`.quiz-option[data-question="${qIndex}"][data-option="${correctOption}"]`);
-                if (correctElement) {
-                    correctElement.classList.add('correct');
-                }
-            }
+        } else {
+            alert(`不支援的文件類型: ${file.name}`);
         }
     });
     
-    alert(`測驗結果：${correct}/${window.currentQuiz.length} 題正確`);
+    e.target.value = ''; // Reset input
 }
 
-// Handle download
-function handleDownload() {
-    if (!window.currentNotes) return;
+function addWebpageSource() {
+    const input = document.getElementById('webpage-url');
+    const url = input.value.trim();
     
-    const blob = new Blob([window.currentNotes], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'notes.md';
-    a.click();
-    URL.revokeObjectURL(url);
-}
-
-// Handle copy
-function handleCopy() {
-    if (!currentNotes) return;
-    
-    navigator.clipboard.writeText(currentNotes).then(() => {
-        alert('筆記已複製到剪貼簿');
-    });
-}
-
-// Handle save
-function handleSave() {
-    if (!currentNotes) return;
-    
-    // Save to localStorage
-    const savedNotes = JSON.parse(localStorage.getItem('savedNotes') || '[]');
-    savedNotes.push({
-        notes: currentNotes,
-        date: new Date().toISOString(),
-        title: currentNotes.split('\n')[0].replace('#', '').trim()
-    });
-    localStorage.setItem('savedNotes', JSON.stringify(savedNotes));
-    
-    alert('筆記已儲存');
-}
-
-// Show loading
-function showLoading() {
-    document.getElementById('loading').style.display = 'block';
-}
-
-// Hide loading
-function hideLoading() {
-    document.getElementById('loading').style.display = 'none';
-}
-
-// Initialize unified note generation
-function initializeUnifiedNoteGeneration() {
-    const generateBtn = document.getElementById('generate-unified-notes');
-    if (generateBtn) {
-        generateBtn.addEventListener('click', async function() {
-            // Show loading state
-            this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...';
-
-            try {
-                // Collect all input data
-                const inputData = collectInputData();
-                
-                if (!validateInputData(inputData)) {
-                    throw new Error('請至少提供一個學習資源');
-                }
-
-                // Call unified notes API
-                const result = await callUnifiedNotesAPI(inputData);
-                
-                // Save the note
-                saveNote(result);
-                
-                // Trigger flashcard generation suggestion
-                if (window.dispatchNoteGenerated) {
-                    window.dispatchNoteGenerated(result);
-                }
-                
-                // Display the generated notes
-                displayNotesInOutputSection(result);
-                
-                // Show success
-                alert('筆記生成成功！');
-
-            } catch (error) {
-                console.error('Notes generation error:', error);
-                alert('生成筆記時發生錯誤：' + error.message);
-            } finally {
-                // Restore button state
-                this.disabled = false;
-                this.innerHTML = '<i class="fas fa-magic"></i><span>🚀 生成統一學習筆記</span><small>整合所有資源生成完整筆記</small>';
-            }
-        });
+    if (!url) {
+        alert('請輸入網頁連結');
+        return;
     }
-}
-
-function collectInputData() {
-    const data = {
-        title: document.getElementById('note-title-input')?.value || '',
-        examSystem: document.getElementById('exam-system-select')?.value || '',
-        subject: document.getElementById('subject-select')?.value || '',
-        topic: document.getElementById('topic-select')?.value || '',
-        customTopic: document.getElementById('custom-topic-input')?.value || '',
-        detailLevel: document.querySelector('.detail-btn.active')?.dataset.level || 'medium',
-        language: document.querySelector('.lang-btn.active')?.dataset.lang || 'zh-tw',
-        sources: {
-            youtube: collectSourceValues('youtube'),
-            files: collectSourceValues('files'),
-            text: collectSourceValues('text'),
-            webpages: collectSourceValues('webpages')
-        }
-    };
-    return data;
-}
-
-function collectSourceValues(type) {
-    const container = document.querySelector(`#${type}-sources-container`);
-    if (!container) return [];
     
-    const inputs = container.querySelectorAll('.source-input');
-    return Array.from(inputs).map(input => input.value.trim()).filter(value => value !== '');
-}
-
-function validateInputData(data) {
-    const hasYoutube = data.sources.youtube.length > 0;
-    const hasFiles = data.sources.files.length > 0;
-    const hasText = data.sources.text.length > 0;
-    const hasWebpages = data.sources.webpages.length > 0;
+    if (!isValidUrl(url)) {
+        alert('請輸入有效的網頁連結');
+        return;
+    }
     
-    return hasYoutube || hasFiles || hasText || hasWebpages;
+    addSourceItem('webpage-list', {
+        type: 'webpage',
+        url: url,
+        title: '網頁內容',
+        data: url
+    });
+    
+    input.value = '';
 }
 
-async function callUnifiedNotesAPI(inputData) {
+function addSourceItem(containerId, item) {
+    const container = document.getElementById(containerId);
+    const div = document.createElement('div');
+    div.className = 'source-item';
+    div.innerHTML = `
+        <div class="source-info">
+            <div class="source-title">${item.title}</div>
+            ${item.url ? `<div class="source-url">${item.url}</div>` : ''}
+            ${item.preview ? `<div class="source-url">${item.preview}</div>` : ''}
+        </div>
+        <button class="remove-btn" onclick="removeSourceItem(this)">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    
+    // Store data
+    div._sourceData = item;
+    
+    container.appendChild(div);
+}
+
+function removeSourceItem(button) {
+    button.parentElement.remove();
+}
+
+// =====================================================
+// NOTES GENERATION
+// =====================================================
+
+function initializeGeneration() {
+    document.getElementById('generate-btn').addEventListener('click', generateNotes);
+    
+    // Flashcards and Quiz generation
+    document.getElementById('generate-flashcards-btn').addEventListener('click', generateFlashcards);
+    document.getElementById('generate-quiz-btn').addEventListener('click', generateQuiz);
+}
+
+async function generateNotes() {
+    const generateBtn = document.getElementById('generate-btn');
+    const loading = document.getElementById('loading');
+    const outputSection = document.getElementById('output-section');
+    
     try {
-        const response = await fetch('http://localhost:5000/api/unified-notes', {
+        // Validate inputs
+        const inputData = collectInputData();
+        if (!validateInputData(inputData)) {
+            alert('請至少添加一個學習資源');
+            return;
+        }
+        
+        // Show loading
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <span>生成中...</span>';
+        loading.style.display = 'block';
+        outputSection.style.display = 'none';
+        
+        // Call API
+        const response = await fetch(`${API_BASE_URL}/unified-notes`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -625,196 +245,476 @@ async function callUnifiedNotesAPI(inputData) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        const data = await response.json();
+        const result = await response.json();
         
-        if (!data.success) {
-            throw new Error(data.error || '生成失敗');
+        if (!result.success) {
+            throw new Error(result.error || '生成失敗');
         }
         
-        return {
-            id: Date.now().toString(),
-            title: data.title,
-            examSystem: data.exam_system,
-            subject: data.subject,
-            topic: data.topic,
-            customTopic: data.custom_topic,
-            content: data.notes,
-            sources: data.sources,
-            detailLevel: inputData.detailLevel,
-            language: inputData.language,
-            createdAt: new Date().toISOString(),
-            lastModified: new Date().toISOString(),
-            wordCount: data.word_count
-        };
+        // Display result
+        currentNotes = result.notes;
+        displayNotes(result.notes);
+        
+        // Show output section
+        loading.style.display = 'none';
+        outputSection.style.display = 'block';
+        
+        // Reset other views
+        currentFlashcards = [];
+        currentQuiz = [];
+        clearContainer('flashcards-container');
+        clearContainer('quiz-container');
+        
+        // Scroll to result
+        outputSection.scrollIntoView({ behavior: 'smooth' });
+        
+        console.log('✅ Notes generated successfully');
+        
     } catch (error) {
-        console.error('Unified notes API error:', error);
-        throw error;
+        console.error('❌ Error generating notes:', error);
+        alert('生成筆記時發生錯誤：' + error.message);
+        
+        loading.style.display = 'none';
+        
+    } finally {
+        // Restore button
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> <span>生成筆記</span>';
     }
 }
 
-function saveNote(noteData) {
-    // Save to localStorage
+async function generateFlashcards() {
+    if (!currentNotes) {
+        alert('請先生成筆記');
+        return;
+    }
+    
+    const container = document.getElementById('flashcards-container');
+    const generateBtn = document.getElementById('generate-flashcards-btn');
+    
+    try {
+        // Show loading
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...';
+        container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i>正在生成記憶卡片...</div>';
+        
+        // Get selected language
+        const language = document.querySelector('input[name="language"]:checked').value;
+        
+        // Call API
+        const response = await fetch(`${API_BASE_URL}/generate-flashcards`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                note_content: currentNotes,
+                count: 15,
+                difficulty: 'medium',
+                types: ['definition', 'example'],
+                language: language
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || '生成記憶卡片失敗');
+        }
+        
+        currentFlashcards = result.flashcards;
+        displayFlashcards(result.flashcards);
+        
+        console.log('✅ Flashcards generated successfully');
+        
+    } catch (error) {
+        console.error('❌ Error generating flashcards:', error);
+        container.innerHTML = `<div class="error-state"><i class="fas fa-exclamation-triangle"></i>生成記憶卡片失敗：${error.message}</div>`;
+        
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> 生成記憶卡片';
+    }
+}
+
+async function generateQuiz() {
+    if (!currentNotes) {
+        alert('請先生成筆記');
+        return;
+    }
+    
+    const container = document.getElementById('quiz-container');
+    const generateBtn = document.getElementById('generate-quiz-btn');
+    
+    try {
+        // Show loading
+        generateBtn.disabled = true;
+        generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 生成中...';
+        container.innerHTML = '<div class="loading-state"><i class="fas fa-spinner fa-spin"></i>正在生成測驗...</div>';
+        
+        // Get selected language
+        const language = document.querySelector('input[name="language"]:checked').value;
+        
+        // Call API
+        const response = await fetch(`${API_BASE_URL}/generate-quiz`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                notes: currentNotes,
+                language: language
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.error || '生成測驗失敗');
+        }
+        
+        currentQuiz = result.quiz;
+        displayQuiz(result.quiz);
+        
+        console.log('✅ Quiz generated successfully');
+        
+    } catch (error) {
+        console.error('❌ Error generating quiz:', error);
+        container.innerHTML = `<div class="error-state"><i class="fas fa-exclamation-triangle"></i>生成測驗失敗：${error.message}</div>`;
+        
+    } finally {
+        generateBtn.disabled = false;
+        generateBtn.innerHTML = '<i class="fas fa-magic"></i> 生成測驗';
+    }
+}
+
+// =====================================================
+// DISPLAY FUNCTIONS
+// =====================================================
+
+function displayNotes(notes) {
+    const container = document.getElementById('notes-content');
+    const html = marked.parse(notes);
+    container.innerHTML = html;
+}
+
+function displayFlashcards(flashcards) {
+    const container = document.getElementById('flashcards-container');
+    
+    if (!flashcards || flashcards.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-layer-group"></i>沒有記憶卡片</div>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    flashcards.forEach((card, index) => {
+        const cardElement = document.createElement('div');
+        cardElement.className = 'flashcard';
+        cardElement.innerHTML = `
+            <div class="flashcard-question">Q${index + 1}: ${card.question}</div>
+            <div class="flashcard-answer">${card.answer}</div>
+        `;
+        container.appendChild(cardElement);
+    });
+}
+
+function displayQuiz(quiz) {
+    const container = document.getElementById('quiz-container');
+    
+    if (!quiz || quiz.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-question-circle"></i>沒有測驗題目</div>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    quiz.forEach((question, qIndex) => {
+        const questionElement = document.createElement('div');
+        questionElement.className = 'quiz-question';
+        
+        let optionsHtml = '';
+        question.options.forEach((option, oIndex) => {
+            optionsHtml += `
+                <div class="quiz-option" data-question="${qIndex}" data-option="${oIndex}">
+                    ${option}
+                </div>
+            `;
+        });
+        
+        questionElement.innerHTML = `
+            <h3>問題 ${qIndex + 1}: ${question.question}</h3>
+            <div class="quiz-options">
+                ${optionsHtml}
+            </div>
+        `;
+        
+        container.appendChild(questionElement);
+    });
+    
+    // Add submit button
+    const submitBtn = document.createElement('button');
+    submitBtn.className = 'quiz-submit';
+    submitBtn.textContent = '提交答案';
+    submitBtn.addEventListener('click', checkQuizAnswers);
+    container.appendChild(submitBtn);
+    
+    // Add option click handlers
+    container.querySelectorAll('.quiz-option').forEach(option => {
+        option.addEventListener('click', function() {
+            const qIndex = this.dataset.question;
+            
+            // Remove selected from other options in same question
+            container.querySelectorAll(`.quiz-option[data-question="${qIndex}"]`).forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            
+            this.classList.add('selected');
+        });
+    });
+}
+
+function renderMindmap(content) {
+    try {
+        const svg = document.getElementById('mindmap-svg');
+        svg.innerHTML = '';
+        
+        if (typeof markmap === 'undefined') {
+            console.error('Markmap library not loaded');
+            return;
+        }
+        
+        const transformer = new markmap.Transformer();
+        const { root } = transformer.transform(content);
+        
+        markmap.Markmap.create(svg, {
+            duration: 300,
+            nodeFont: '16px Inter, sans-serif',
+            nodeMinHeight: 30,
+            spacingVertical: 10,
+            spacingHorizontal: 80,
+            autoFit: true,
+            fitRatio: 0.95,
+            color: (node) => {
+                const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe'];
+                return colors[node.depth % colors.length];
+            }
+        }, root);
+        
+        console.log('✅ Mindmap rendered successfully');
+        
+    } catch (error) {
+        console.error('❌ Error rendering mindmap:', error);
+        document.getElementById('mindmap-svg').innerHTML = '<text x="50%" y="50%" text-anchor="middle" fill="#718096">思維導圖生成失敗</text>';
+    }
+}
+
+// =====================================================
+// ACTIONS
+// =====================================================
+
+function initializeActions() {
+    document.getElementById('download-btn').addEventListener('click', downloadNotes);
+    document.getElementById('save-btn').addEventListener('click', saveNotes);
+    document.getElementById('copy-btn').addEventListener('click', copyNotes);
+}
+
+function downloadNotes() {
+    if (!currentNotes) {
+        alert('沒有可下載的筆記');
+        return;
+    }
+    
+    const title = document.getElementById('note-title').value || 'notes';
+    const blob = new Blob([currentNotes], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function saveNotes() {
+    if (!currentNotes) {
+        alert('沒有可儲存的筆記');
+        return;
+    }
+    
+    const noteData = {
+        title: document.getElementById('note-title').value || '未命名筆記',
+        content: currentNotes,
+        createdAt: new Date().toISOString(),
+        examSystem: document.getElementById('exam-system').value,
+        subject: document.getElementById('subject').value,
+        topic: document.getElementById('topic').value
+    };
+    
     const savedNotes = JSON.parse(localStorage.getItem('savedNotes') || '[]');
     savedNotes.push(noteData);
     localStorage.setItem('savedNotes', JSON.stringify(savedNotes));
+    
+    alert('筆記已儲存到本地');
 }
 
-function displayNotesInOutputSection(noteData) {
-    // Store current notes globally (both old and new format for compatibility)
-    window.currentNotes = noteData.content;
-    window.currentNoteData = noteData;
-    
-    // Also store in old format for compatibility
-    window.currentFlashcards = [];
-    window.currentQuiz = [];
-    
-    // Convert markdown to HTML
-    const html = marked.parse(noteData.content);
-    
-    // Display in notes content area
-    const notesContent = document.getElementById('notes-content');
-    if (notesContent) {
-        notesContent.innerHTML = html;
+async function copyNotes() {
+    if (!currentNotes) {
+        alert('沒有可複製的筆記');
+        return;
     }
     
-    // Show output section
-    const outputSection = document.getElementById('output-section');
-    if (outputSection) {
-        outputSection.style.display = 'block';
+    try {
+        await navigator.clipboard.writeText(currentNotes);
+        alert('筆記已複製到剪貼簿');
+    } catch (error) {
+        console.error('Failed to copy:', error);
+        alert('複製失敗');
     }
+}
+
+// =====================================================
+// QUIZ LOGIC
+// =====================================================
+
+function checkQuizAnswers() {
+    const container = document.getElementById('quiz-container');
+    let correct = 0;
     
-    // Switch to notes view
-    const notesView = document.getElementById('notes-view');
-    if (notesView) {
-        // Hide all view contents
-        document.querySelectorAll('.view-content').forEach(view => {
-            view.classList.remove('active');
-        });
+    currentQuiz.forEach((question, qIndex) => {
+        const selected = container.querySelector(`.quiz-option[data-question="${qIndex}"].selected`);
         
-        // Show notes view
-        notesView.classList.add('active');
-        
-        // Activate notes button
-        document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        
-        const notesBtn = document.querySelector('.view-btn[data-view="notes"]');
-        if (notesBtn) {
-            notesBtn.classList.add('active');
+        if (selected) {
+            const selectedOption = parseInt(selected.dataset.option);
+            
+            // Find correct option (simple matching)
+            let correctOption = -1;
+            const correctLetter = question.correct.toUpperCase().trim();
+            const letters = ['A', 'B', 'C', 'D'];
+            correctOption = letters.indexOf(correctLetter);
+            
+            if (correctOption === -1) {
+                correctOption = 0; // Fallback
+            }
+            
+            if (selectedOption === correctOption) {
+                selected.classList.add('correct');
+                correct++;
+            } else {
+                selected.classList.add('incorrect');
+                const correctElement = container.querySelector(`.quiz-option[data-question="${qIndex}"][data-option="${correctOption}"]`);
+                if (correctElement) {
+                    correctElement.classList.add('correct');
+                }
+            }
         }
-    }
+    });
     
-    // Reset other views
-    window.currentFlashcards = [];
-    window.currentQuiz = [];
-    
-    // Clear other containers
-    const flashcardsContainer = document.getElementById('flashcards-container');
-    if (flashcardsContainer) {
-        flashcardsContainer.innerHTML = '';
-    }
-    
-    const quizContainer = document.getElementById('quiz-container');
-    if (quizContainer) {
-        quizContainer.innerHTML = '';
-    }
-    
-    // Scroll to output section
-    outputSection?.scrollIntoView({ behavior: 'smooth' });
+    alert(`測驗結果：${correct}/${currentQuiz.length} 題正確`);
 }
 
-// Initialize sidebar buttons
-function initializeSidebarButtons() {
-    console.log('Initializing sidebar buttons...');
+// =====================================================
+// UTILITY FUNCTIONS
+// =====================================================
+
+function collectInputData() {
+    // Collect form data
+    const title = document.getElementById('note-title').value.trim();
+    const examSystem = document.getElementById('exam-system').value;
+    const subject = document.getElementById('subject').value;
+    const topic = document.getElementById('topic').value.trim();
+    const detailLevel = document.querySelector('input[name="detail"]:checked').value;
+    const language = document.querySelector('input[name="language"]:checked').value;
     
-    // New note button
-    const newNoteBtn = document.getElementById('new-note-btn');
-    if (newNoteBtn) {
-        console.log('Found new-note-btn, attaching event listener');
-        newNoteBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('New note button clicked!');
-            
-            // Scroll to input section
-            const inputSection = document.querySelector('.unified-input-section');
-            if (inputSection) {
-                console.log('Scrolling to input section');
-                inputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                
-                // Focus on title input if available
-                const titleInput = document.getElementById('note-title-input');
-                if (titleInput) {
-                    setTimeout(() => {
-                        titleInput.focus();
-                        console.log('Focused on title input');
-                    }, 500);
-                }
-            } else {
-                console.error('Input section not found');
-            }
-        });
-    } else {
-        console.error('new-note-btn not found');
-    }
+    // Collect sources
+    const sources = {
+        youtube: [],
+        files: [],
+        text: [],
+        webpages: []
+    };
     
-    // New flashcard set button
-    const newFlashcardBtn = document.getElementById('new-flashcard-set-btn');
-    if (newFlashcardBtn) {
-        console.log('Found new-flashcard-set-btn, attaching event listener');
-        newFlashcardBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('New flashcard set button clicked!');
-            alert('記憶卡集功能即將推出！');
-        });
-    } else {
-        console.error('new-flashcard-set-btn not found');
-    }
+    // YouTube sources
+    document.querySelectorAll('#youtube-list .source-item').forEach(item => {
+        sources.youtube.push(item._sourceData.data);
+    });
     
-    // New quiz set button
-    const newQuizBtn = document.getElementById('new-quiz-set-btn');
-    if (newQuizBtn) {
-        console.log('Found new-quiz-set-btn, attaching event listener');
-        newQuizBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('New quiz set button clicked!');
-            alert('測驗集功能即將推出！');
-        });
-    } else {
-        console.error('new-quiz-set-btn not found');
-    }
+    // Text sources
+    document.querySelectorAll('#text-list .source-item').forEach(item => {
+        sources.text.push(item._sourceData.data);
+    });
     
-    // Collapse sidebar button
-    const collapseBtn = document.getElementById('collapse-sidebar');
-    if (collapseBtn) {
-        console.log('Found collapse-sidebar, attaching event listener');
-        collapseBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            console.log('Collapse sidebar button clicked!');
-            
-            // Toggle sidebar collapsed state
-            const sidebar = document.querySelector('.sidebar');
-            const mainContainer = document.querySelector('.main-container');
-            
-            if (sidebar && mainContainer) {
-                sidebar.classList.toggle('collapsed');
-                mainContainer.classList.toggle('sidebar-collapsed');
-                
-                // Change icon
-                const icon = collapseBtn.querySelector('i');
-                if (icon) {
-                    if (sidebar.classList.contains('collapsed')) {
-                        icon.className = 'fas fa-chevron-right';
-                    } else {
-                        icon.className = 'fas fa-chevron-left';
-                    }
-                }
-                console.log('Sidebar collapsed state toggled');
-            } else {
-                console.error('Sidebar or main container not found');
-            }
+    // File sources (convert to base64 or handle differently)
+    document.querySelectorAll('#file-list .source-item').forEach(item => {
+        // For now, just store file info
+        sources.files.push({
+            name: item._sourceData.data.name,
+            size: item._sourceData.data.size,
+            type: item._sourceData.data.type
         });
-    } else {
-        console.error('collapse-sidebar not found');
+    });
+    
+    // Webpage sources
+    document.querySelectorAll('#webpage-list .source-item').forEach(item => {
+        sources.webpages.push(item._sourceData.data);
+    });
+    
+    return {
+        title: title || '未命名筆記',
+        examSystem,
+        subject,
+        topic,
+        customTopic: topic,
+        detailLevel,
+        language,
+        sources
+    };
+}
+
+function validateInputData(data) {
+    const hasYoutube = data.sources.youtube.length > 0;
+    const hasText = data.sources.text.length > 0;
+    const hasFiles = data.sources.files.length > 0;
+    const hasWebpages = data.sources.webpages.length > 0;
+    
+    return hasYoutube || hasText || hasFiles || hasWebpages;
+}
+
+function clearContainer(id) {
+    const container = document.getElementById(id);
+    if (container) {
+        container.innerHTML = '';
     }
 }
+
+function isValidYouTubeUrl(url) {
+    return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\//.test(url);
+}
+
+function isValidUrl(url) {
+    try {
+        new URL(url);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function isValidFileType(file) {
+    const validTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain'
+    ];
+    return validTypes.includes(file.type);
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+console.log('📱 NexLearn AI Notes - Frontend Ready');
