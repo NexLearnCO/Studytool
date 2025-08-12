@@ -23,6 +23,7 @@ def home():
             "/api/youtube-to-notes",
             "/api/pdf-to-notes",
             "/api/text-to-notes",
+            "/api/unified-notes",
             "/api/generate-flashcards",
             "/api/generate-quiz"
         ]
@@ -224,6 +225,131 @@ def generate_flashcards():
             "count": len(flashcards)
         })
 
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/unified-notes', methods=['POST'])
+def unified_notes():
+    """Generate notes from multiple sources (YouTube, PDF, text, webpages)"""
+    try:
+        data = request.json
+        sources = data.get('sources', {})
+        title = data.get('title', '未命名筆記')
+        exam_system = data.get('examSystem', '')
+        subject = data.get('subject', '')
+        topic = data.get('topic', '')
+        custom_topic = data.get('customTopic', '')
+        detail_level = data.get('detailLevel', 'medium')
+        language = data.get('language', 'zh-tw')
+        
+        all_content = []
+        source_info = []
+        
+        # Process YouTube sources
+        youtube_urls = sources.get('youtube', [])
+        for url in youtube_urls:
+            if url.strip():
+                try:
+                    video_info = youtube_service.get_transcript(url)
+                    all_content.append(video_info['transcript'])
+                    source_info.append({
+                        'type': 'youtube',
+                        'title': video_info.get('title', url),
+                        'url': url
+                    })
+                except Exception as e:
+                    print(f"YouTube processing error for {url}: {e}")
+                    continue
+        
+        # Process file sources
+        files = sources.get('files', [])
+        for file_info in files:
+            try:
+                file_content = pdf_service.extract_text_from_file(file_info)
+                all_content.append(file_content)
+                source_info.append({
+                    'type': 'file',
+                    'name': file_info.get('name', 'unknown'),
+                    'size': file_info.get('size', 0)
+                })
+            except Exception as e:
+                print(f"File processing error: {e}")
+                continue
+        
+        # Process text sources
+        text_contents = sources.get('text', [])
+        for text in text_contents:
+            if text.strip():
+                all_content.append(text)
+                source_info.append({
+                    'type': 'text',
+                    'preview': text[:100] + '...' if len(text) > 100 else text
+                })
+        
+        # Process webpage sources
+        webpage_urls = sources.get('webpages', [])
+        for url in webpage_urls:
+            if url.strip():
+                try:
+                    # Simple webpage content extraction (basic implementation)
+                    import requests
+                    from bs4 import BeautifulSoup
+                    
+                    response = requests.get(url, timeout=10)
+                    soup = BeautifulSoup(response.content, 'html.parser')
+                    
+                    # Extract text from paragraphs
+                    paragraphs = soup.find_all('p')
+                    webpage_text = ' '.join([p.get_text() for p in paragraphs])
+                    
+                    if webpage_text:
+                        all_content.append(webpage_text)
+                        source_info.append({
+                            'type': 'webpage',
+                            'url': url,
+                            'title': soup.title.string if soup.title else url
+                        })
+                except Exception as e:
+                    print(f"Webpage processing error for {url}: {e}")
+                    continue
+        
+        if not all_content:
+            return jsonify({"error": "No valid content found from sources"}), 400
+        
+        # Combine all content
+        combined_content = '\n\n'.join(all_content)
+        
+        # Generate unified notes with enhanced context
+        context_info = {
+            'title': title,
+            'exam_system': exam_system,
+            'subject': subject,
+            'topic': topic,
+            'custom_topic': custom_topic,
+            'source_count': len(source_info),
+            'sources': source_info
+        }
+        
+        notes = openai_service.generate_unified_notes(
+            combined_content,
+            detail_level,
+            language,
+            context_info
+        )
+        
+        return jsonify({
+            "success": True,
+            "notes": notes,
+            "title": title,
+            "exam_system": exam_system,
+            "subject": subject,
+            "topic": topic,
+            "custom_topic": custom_topic,
+            "sources": source_info,
+            "word_count": len(notes.split()),
+            "processing_time": "calculated_on_frontend"
+        })
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

@@ -237,8 +237,8 @@ class ModalManager {
                 throw new Error('請至少提供一個學習資源');
             }
 
-            // Process the inputs using existing functionality
-            const result = await this.processUnifiedInput(inputData);
+            // Call unified notes API
+            const result = await this.callUnifiedNotesAPI(inputData);
             
             // Save the note
             this.saveNote(result);
@@ -322,7 +322,50 @@ class ModalManager {
                data.sources.webpages.length > 0;
     }
 
-    async processUnifiedInput(inputData) {
+    async callUnifiedNotesAPI(inputData) {
+        try {
+            const response = await fetch('/api/unified-notes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(inputData)
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'API 調用失敗');
+            }
+
+            const data = await response.json();
+            
+            if (data.success) {
+                return {
+                    id: Date.now().toString(),
+                    title: data.title,
+                    examSystem: data.exam_system,
+                    subject: data.subject,
+                    topic: data.topic,
+                    customTopic: data.custom_topic,
+                    content: data.notes,
+                    sources: data.sources,
+                    detailLevel: inputData.detailLevel,
+                    language: inputData.language,
+                    createdAt: new Date().toISOString(),
+                    lastModified: new Date().toISOString(),
+                    wordCount: data.word_count
+                };
+            } else {
+                throw new Error('API 返回失敗狀態');
+            }
+
+        } catch (error) {
+            console.error('Unified notes API error:', error);
+            throw error;
+        }
+    }
+
+    async processUnifiedInputOld(inputData) {
         let allContent = [];
         let allNotes = '';
         
