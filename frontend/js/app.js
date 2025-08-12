@@ -12,8 +12,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.querySelector('.tab-btn')) {
         initializeTabs();
         initializeEventListeners();
-        initializeViewToggle();
     }
+    
+    // Always initialize view toggle for output section
+    initializeViewToggle();
     
     // Initialize new unified system
     console.log('NexLearn AI Notes initialized with new UI system');
@@ -87,11 +89,11 @@ function initializeViewToggle() {
             document.getElementById(viewId).classList.add('active');
             
             // Load content for specific views
-            if (btn.dataset.view === 'mindmap' && currentNotes) {
-                renderMindmap(currentNotes);
-            } else if (btn.dataset.view === 'flashcards' && currentNotes && currentFlashcards.length === 0) {
+            if (btn.dataset.view === 'mindmap' && window.currentNotes) {
+                renderMindmap(window.currentNotes);
+            } else if (btn.dataset.view === 'flashcards' && window.currentNotes && (!window.currentFlashcards || window.currentFlashcards.length === 0)) {
                 generateFlashcards();
-            } else if (btn.dataset.view === 'quiz' && currentNotes && currentQuiz.length === 0) {
+            } else if (btn.dataset.view === 'quiz' && window.currentNotes && (!window.currentQuiz || window.currentQuiz.length === 0)) {
                 generateQuiz();
             }
         });

@@ -248,12 +248,12 @@ class ModalManager {
                 window.dispatchNoteGenerated(result);
             }
             
+            // Display the generated notes
+            this.displayNotesInOutputSection(result);
+            
             // Show success and close modal
             alert('筆記生成成功！');
             this.closeCurrentModal();
-            
-            // Switch to notes view
-            window.sidebarManager?.switchView('all-notes');
 
         } catch (error) {
             console.error('Notes generation error:', error);
@@ -500,6 +500,75 @@ class ModalManager {
     initializeCanvas() {
         // TODO: Initialize canvas functionality
         console.log('Initializing canvas...');
+    }
+
+    displayNotesInOutputSection(noteData) {
+        // Store current notes globally
+        window.currentNotes = noteData.content;
+        window.currentNoteData = noteData;
+        
+        // Convert markdown to HTML
+        const html = marked.parse(noteData.content);
+        
+        // Display in notes content area
+        const notesContent = document.getElementById('notes-content');
+        if (notesContent) {
+            notesContent.innerHTML = html;
+        }
+        
+        // Show output section
+        const outputSection = document.getElementById('output-section');
+        if (outputSection) {
+            outputSection.style.display = 'block';
+        }
+        
+        // Switch to notes view
+        const notesView = document.getElementById('notes-view');
+        if (notesView) {
+            // Hide all view contents
+            document.querySelectorAll('.view-content').forEach(view => {
+                view.classList.remove('active');
+            });
+            
+            // Show notes view
+            notesView.classList.add('active');
+            
+            // Activate notes button
+            document.querySelectorAll('.view-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            const notesBtn = document.querySelector('.view-btn[data-view="notes"]');
+            if (notesBtn) {
+                notesBtn.classList.add('active');
+            }
+        }
+        
+        // Reset other views
+        window.currentFlashcards = [];
+        window.currentQuiz = [];
+        
+        // Clear other containers
+        const flashcardsContainer = document.getElementById('flashcards-container');
+        if (flashcardsContainer) {
+            flashcardsContainer.innerHTML = '';
+        }
+        
+        const quizContainer = document.getElementById('quiz-container');
+        if (quizContainer) {
+            quizContainer.innerHTML = '';
+        }
+        
+        // Scroll to output section
+        outputSection?.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    closeCurrentModal() {
+        // Close any open modal
+        const openModal = document.querySelector('.modal[style*="block"]');
+        if (openModal) {
+            openModal.style.display = 'none';
+        }
     }
 }
 
