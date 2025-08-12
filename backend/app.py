@@ -122,43 +122,6 @@ def text_to_notes():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/generate-flashcards', methods=['POST'])
-def generate_flashcards():
-    """Generate flashcards from notes"""
-    try:
-        data = request.json
-        notes = data.get('notes')
-        language = data.get('language', 'zh-tw')
-        
-        if not notes:
-            return jsonify({"error": "Notes are required"}), 400
-        
-        flashcards_json = openai_service.generate_flashcards(notes, language)
-        
-        # Try to parse JSON, with fallback for malformed responses
-        try:
-            flashcards = json.loads(flashcards_json)
-        except json.JSONDecodeError:
-            # Extract JSON from response if it's wrapped in text
-            import re
-            json_match = re.search(r'\[.*\]', flashcards_json, re.DOTALL)
-            if json_match:
-                flashcards = json.loads(json_match.group())
-            else:
-                # Fallback: create simple flashcards from the response
-                flashcards = [
-                    {"question": "What are the main points from the notes?", "answer": flashcards_json[:200] + "..."},
-                    {"question": "Summarize the key concepts", "answer": "Based on the generated content"}
-                ]
-        
-        return jsonify({
-            "success": True,
-            "flashcards": flashcards
-        })
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route('/api/generate-quiz', methods=['POST'])
 def generate_quiz():
     """Generate quiz from notes"""
@@ -201,7 +164,7 @@ def generate_quiz():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/generate-flashcards', methods=['POST'])
-def generate_flashcards():
+def generate_flashcards_enhanced():
     """Generate flashcards from note content"""
     try:
         data = request.json
