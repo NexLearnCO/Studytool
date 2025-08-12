@@ -272,7 +272,7 @@ class OpenAIService:
 """
         return prompt
     
-    def generate_flashcards(self, notes, language='zh-tw'):
+    def generate_flashcards(self, notes, count=15, difficulty='medium', types=['definition', 'example'], language='zh-tw'):
         """Generate enhanced flashcards from notes using optimized prompts"""
         
         # Enhanced language-specific instructions for flashcards
@@ -284,8 +284,38 @@ class OpenAIService:
         
         language_instruction = language_instructions.get(language, language_instructions['zh-tw'])
         
+        # Define card types in different languages
+        type_descriptions = {
+            'en': {
+                'definition': 'Definition/explanation cards',
+                'example': 'Example/illustration cards', 
+                'application': 'Application/problem-solving cards',
+                'comparison': 'Comparison/contrast cards'
+            },
+            'zh-cn': {
+                'definition': '定义解释类卡片',
+                'example': '举例说明类卡片',
+                'application': '应用练习类卡片', 
+                'comparison': '比较分析类卡片'
+            },
+            'zh-tw': {
+                'definition': '定義解釋類卡片',
+                'example': '舉例說明類卡片',
+                'application': '應用練習類卡片',
+                'comparison': '比較分析類卡片'
+            }
+        }
+        
+        type_desc = type_descriptions.get(language, type_descriptions['zh-tw'])
+        selected_types = [type_desc[t] for t in types if t in type_desc]
+
         prompt = f"""
-基於提供的學習筆記，創建高質量的記憶卡片用於學習復習。
+基於提供的學習筆記，創建 {count} 張高質量的記憶卡片用於學習復習。
+
+## 卡片要求：
+- 數量：{count} 張
+- 難度：{difficulty}
+- 包含類型：{', '.join(selected_types)}
 
 ## 卡片設計原則：
 

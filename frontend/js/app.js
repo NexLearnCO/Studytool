@@ -8,9 +8,23 @@ const API_BASE_URL = 'http://localhost:5000/api';
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    initializeTabs();
-    initializeEventListeners();
-    initializeViewToggle();
+    // Initialize old system (for backward compatibility)
+    if (document.querySelector('.tab-btn')) {
+        initializeTabs();
+        initializeEventListeners();
+        initializeViewToggle();
+    }
+    
+    // Initialize new unified system
+    console.log('NexLearn AI Notes initialized with new UI system');
+    
+    // Dispatch note generation events for flashcard integration
+    window.dispatchNoteGenerated = function(noteData) {
+        const event = new CustomEvent('noteGenerated', {
+            detail: { noteData: noteData }
+        });
+        document.dispatchEvent(event);
+    };
 });
 
 // Initialize tabs

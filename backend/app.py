@@ -199,6 +199,34 @@ def generate_quiz():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/generate-flashcards', methods=['POST'])
+def generate_flashcards():
+    """Generate flashcards from note content"""
+    try:
+        data = request.json
+        note_content = data.get('note_content')
+        count = data.get('count', 15)
+        difficulty = data.get('difficulty', 'medium')
+        types = data.get('types', ['definition', 'example'])
+        language = data.get('language', 'zh-tw')
+
+        if not note_content:
+            return jsonify({"error": "Note content is required"}), 400
+
+        # Generate flashcards using OpenAI
+        flashcards = openai_service.generate_flashcards(
+            note_content, count, difficulty, types, language
+        )
+
+        return jsonify({
+            "success": True,
+            "flashcards": flashcards,
+            "count": len(flashcards)
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(
         host='0.0.0.0',
