@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize unified note generation
     initializeUnifiedNoteGeneration();
     
+    // Initialize sidebar buttons
+    initializeSidebarButtons();
+    
     // Dispatch note generation events for flashcard integration
     window.dispatchNoteGenerated = function(noteData) {
         const event = new CustomEvent('noteGenerated', {
@@ -719,4 +722,99 @@ function displayNotesInOutputSection(noteData) {
     
     // Scroll to output section
     outputSection?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Initialize sidebar buttons
+function initializeSidebarButtons() {
+    console.log('Initializing sidebar buttons...');
+    
+    // New note button
+    const newNoteBtn = document.getElementById('new-note-btn');
+    if (newNoteBtn) {
+        console.log('Found new-note-btn, attaching event listener');
+        newNoteBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('New note button clicked!');
+            
+            // Scroll to input section
+            const inputSection = document.querySelector('.unified-input-section');
+            if (inputSection) {
+                console.log('Scrolling to input section');
+                inputSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                // Focus on title input if available
+                const titleInput = document.getElementById('note-title-input');
+                if (titleInput) {
+                    setTimeout(() => {
+                        titleInput.focus();
+                        console.log('Focused on title input');
+                    }, 500);
+                }
+            } else {
+                console.error('Input section not found');
+            }
+        });
+    } else {
+        console.error('new-note-btn not found');
+    }
+    
+    // New flashcard set button
+    const newFlashcardBtn = document.getElementById('new-flashcard-set-btn');
+    if (newFlashcardBtn) {
+        console.log('Found new-flashcard-set-btn, attaching event listener');
+        newFlashcardBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('New flashcard set button clicked!');
+            alert('記憶卡集功能即將推出！');
+        });
+    } else {
+        console.error('new-flashcard-set-btn not found');
+    }
+    
+    // New quiz set button
+    const newQuizBtn = document.getElementById('new-quiz-set-btn');
+    if (newQuizBtn) {
+        console.log('Found new-quiz-set-btn, attaching event listener');
+        newQuizBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('New quiz set button clicked!');
+            alert('測驗集功能即將推出！');
+        });
+    } else {
+        console.error('new-quiz-set-btn not found');
+    }
+    
+    // Collapse sidebar button
+    const collapseBtn = document.getElementById('collapse-sidebar');
+    if (collapseBtn) {
+        console.log('Found collapse-sidebar, attaching event listener');
+        collapseBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('Collapse sidebar button clicked!');
+            
+            // Toggle sidebar collapsed state
+            const sidebar = document.querySelector('.sidebar');
+            const mainContainer = document.querySelector('.main-container');
+            
+            if (sidebar && mainContainer) {
+                sidebar.classList.toggle('collapsed');
+                mainContainer.classList.toggle('sidebar-collapsed');
+                
+                // Change icon
+                const icon = collapseBtn.querySelector('i');
+                if (icon) {
+                    if (sidebar.classList.contains('collapsed')) {
+                        icon.className = 'fas fa-chevron-right';
+                    } else {
+                        icon.className = 'fas fa-chevron-left';
+                    }
+                }
+                console.log('Sidebar collapsed state toggled');
+            } else {
+                console.error('Sidebar or main container not found');
+            }
+        });
+    } else {
+        console.error('collapse-sidebar not found');
+    }
 }
