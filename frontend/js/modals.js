@@ -324,7 +324,7 @@ class ModalManager {
 
     async callUnifiedNotesAPI(inputData) {
         try {
-            const response = await fetch('/api/unified-notes', {
+            const response = await fetch('http://localhost:5000/api/unified-notes', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -372,7 +372,7 @@ class ModalManager {
         // Process YouTube videos
         for (const url of inputData.sources.youtube) {
             try {
-                const response = await fetch('/api/youtube-to-notes', {
+                const response = await fetch('http://localhost:5000/api/youtube-to-notes', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -402,7 +402,7 @@ class ModalManager {
         // Process text content
         for (const text of inputData.sources.text) {
             try {
-                const response = await fetch('/api/text-to-notes', {
+                const response = await fetch('http://localhost:5000/api/text-to-notes', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -437,7 +437,7 @@ class ModalManager {
                     formData.append('detail_level', inputData.detailLevel);
                     formData.append('language', inputData.language);
                     
-                    const response = await fetch('/api/pdf-to-notes', {
+                    const response = await fetch('http://localhost:5000/api/pdf-to-notes', {
                         method: 'POST',
                         body: formData
                     });

@@ -4,6 +4,7 @@ from config import Config
 class OpenAIService:
     def __init__(self):
         openai.api_key = Config.OPENAI_API_KEY
+        self.model = Config.OPENAI_MODEL
         
     def generate_notes(self, content, detail_level='medium', language='zh-tw', content_type='general'):
         """Generate notes from content using OpenAI with enhanced prompts and smart content handling"""
@@ -541,7 +542,7 @@ class OpenAIService:
 請確保生成的筆記具有清晰的結構、豐富的內容和優秀的學習價值。"""
 
         try:
-            response = self.client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": language_instruction},

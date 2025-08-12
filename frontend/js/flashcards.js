@@ -245,7 +245,7 @@ class FlashcardManager {
 
     async generateFlashcardsFromNote(note, settings) {
         // Call backend API to generate flashcards
-        const response = await fetch('/api/generate-flashcards', {
+        const response = await fetch('http://localhost:5000/api/generate-flashcards', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
