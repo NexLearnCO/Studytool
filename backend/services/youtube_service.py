@@ -14,7 +14,6 @@ backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if backend_dir not in sys.path:
     sys.path.insert(0, backend_dir)
 from config import Config
-from .youtube_audio_service import YouTubeAudioService
 
 class YouTubeService:
     @staticmethod
@@ -171,18 +170,17 @@ class YouTubeService:
             video_id = YouTubeService.extract_video_id(url)
             print(f"Processing YouTube video: {video_id}")
             
-            # Method 1: Use the WORKING audio service (yt_to_text_hybrid.py logic)
-            print("Method 1: Using working audio extraction with OpenAI Whisper...")
+            # Method 1: Use improved hybrid audio extraction (yt_to_text_hybrid.py logic)
+            print("Method 1: Trying improved audio extraction with OpenAI Whisper...")
             try:
-                audio_service = YouTubeAudioService()
-                result = audio_service.get_transcript(url)
+                result = YouTubeService.get_transcript_hybrid(url)
                 
                 if result and result.get('transcript', '').strip():
                     print(f"Method 1 Success: {len(result['transcript'])} characters")
                     return result
                     
             except Exception as e:
-                print(f"Method 1 (Working Audio Service) failed: {str(e)}")
+                print(f"Method 1 (Hybrid Audio) failed: {str(e)}")
                 # Continue to other methods
             
             # Method 2: Try youtube-transcript-api (fallback)
