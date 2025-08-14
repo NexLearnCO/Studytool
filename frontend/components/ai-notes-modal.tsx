@@ -451,9 +451,10 @@ export function AINotesModal({ children }: AINotesModalProps) {
 
                   <TabsContent value="notes" className="h-80 overflow-y-auto p-4 m-0">
                     <div className="prose prose-slate max-w-none">
-                      <pre className="whitespace-pre-wrap font-sans text-sm">
-                        {generatedNotes}
-                      </pre>
+                      <div 
+                        className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
+                        dangerouslySetInnerHTML={{ __html: generatedNotes.replace(/\n/g, '<br/>') }}
+                      />
                     </div>
                   </TabsContent>
 
