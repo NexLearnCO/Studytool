@@ -409,10 +409,10 @@ export function AINotesModal({ children }: AINotesModalProps) {
             )}
           </div>
 
-          {/* Right Column - Preview */}
+          {/* Right Column - Multi-View Output */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">筆記預覽</h3>
+              <h3 className="text-lg font-semibold">學習內容生成</h3>
               {generatedNotes && (
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={copyNotes}>
@@ -427,19 +427,90 @@ export function AINotesModal({ children }: AINotesModalProps) {
               )}
             </div>
             
-            <div className="border rounded-lg h-96 overflow-y-auto">
+            <div className="border rounded-lg h-96">
               {generatedNotes ? (
-                <div className="p-4 prose prose-slate max-w-none">
-                  <pre className="whitespace-pre-wrap font-sans text-sm">
-                    {generatedNotes}
-                  </pre>
-                </div>
+                <Tabs defaultValue="notes" className="h-full">
+                  <TabsList className="grid w-full grid-cols-4 rounded-t-lg rounded-b-none">
+                    <TabsTrigger value="notes" className="text-xs">
+                      <FileText className="h-4 w-4 mr-1" />
+                      筆記
+                    </TabsTrigger>
+                    <TabsTrigger value="mindmap" className="text-xs">
+                      <Brain className="h-4 w-4 mr-1" />
+                      思維導圖
+                    </TabsTrigger>
+                    <TabsTrigger value="flashcards" className="text-xs">
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      記憶卡片
+                    </TabsTrigger>
+                    <TabsTrigger value="quiz" className="text-xs">
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      測驗
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="notes" className="h-80 overflow-y-auto p-4 m-0">
+                    <div className="prose prose-slate max-w-none">
+                      <pre className="whitespace-pre-wrap font-sans text-sm">
+                        {generatedNotes}
+                      </pre>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="mindmap" className="h-80 p-4 m-0">
+                    <div className="h-full bg-slate-50 rounded flex items-center justify-center">
+                      <div className="text-center text-slate-500">
+                        <Brain className="h-12 w-12 mx-auto mb-3" />
+                        <p className="font-medium">思維導圖功能</p>
+                        <p className="text-sm mt-1 mb-3">基於生成的筆記創建可視化思維導圖</p>
+                        <Button variant="outline" size="sm">
+                          <Brain className="h-4 w-4 mr-1" />
+                          生成思維導圖
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="flashcards" className="h-80 p-4 m-0">
+                    <div className="h-full bg-slate-50 rounded flex items-center justify-center">
+                      <div className="text-center text-slate-500">
+                        <Sparkles className="h-12 w-12 mx-auto mb-3" />
+                        <p className="font-medium">記憶卡片生成</p>
+                        <p className="text-sm mt-1 mb-3">從筆記內容提取關鍵概念生成記憶卡片</p>
+                        <Button variant="outline" size="sm">
+                          <Sparkles className="h-4 w-4 mr-1" />
+                          生成記憶卡片
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="quiz" className="h-80 p-4 m-0">
+                    <div className="h-full bg-slate-50 rounded flex items-center justify-center">
+                      <div className="text-center text-slate-500">
+                        <CheckCircle className="h-12 w-12 mx-auto mb-3" />
+                        <p className="font-medium">智能測驗生成</p>
+                        <p className="text-sm mt-1 mb-3">基於筆記內容自動生成測驗題目</p>
+                        <Button variant="outline" size="sm">
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          生成測驗
+                        </Button>
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
               ) : (
                 <div className="h-full flex items-center justify-center text-slate-400">
                   <div className="text-center">
                     <FileText className="h-12 w-12 mx-auto mb-3" />
-                    <p>筆記內容將在生成後顯示</p>
+                    <p>學習內容將在生成後顯示</p>
                     <p className="text-sm mt-1">請先配置參數並提供學習資源</p>
+                    <div className="flex gap-2 mt-4 justify-center">
+                      <Badge variant="outline">📝 筆記</Badge>
+                      <Badge variant="outline">🧠 思維導圖</Badge>
+                      <Badge variant="outline">🃏 記憶卡片</Badge>
+                      <Badge variant="outline">❓ 測驗</Badge>
+                    </div>
                   </div>
                 </div>
               )}
