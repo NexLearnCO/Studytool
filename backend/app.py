@@ -191,6 +191,7 @@ def generate_flashcards_enhanced():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/generate-notes', methods=['POST'])
 @app.route('/api/unified-notes', methods=['POST'])
 def unified_notes():
     """Generate notes from multiple sources (YouTube, PDF, text, webpages)"""

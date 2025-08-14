@@ -17,10 +17,15 @@ class Config:
     OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
     if not OPENAI_API_KEY:
         raise ValueError("OPENAI_API_KEY environment variable is required. Please set it in your .env file.")
+    
+    # Flask settings
     FLASK_PORT = int(os.getenv('FLASK_PORT', 5000))
     FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
     MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
     ALLOWED_EXTENSIONS = {'pdf', 'txt'}
+    
+    # Database settings
+    DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///nexlearn.db')
     
     # OpenAI settings
     OPENAI_MODEL = "gpt-3.5-turbo"
