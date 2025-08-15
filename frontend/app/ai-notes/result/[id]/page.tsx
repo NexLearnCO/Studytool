@@ -55,7 +55,7 @@ export default function AINotesResultPage() {
       setEditableNotes(data.notes)
     } else {
       // Redirect back if no data
-      router.push('/ai-notes')
+      router.push('/')
     }
   }, [router])
 
@@ -125,7 +125,7 @@ export default function AINotesResultPage() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => router.push('/ai-notes')}
+                onClick={() => router.push('/')}
                 className="text-gray-600 hover:text-gray-900"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />

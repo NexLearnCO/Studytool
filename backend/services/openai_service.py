@@ -767,13 +767,13 @@ class OpenAIService:
 
 請創建一份徹底完整、適合深度學習的專業筆記。"""
 
-        # 根據詳細程度設置適當的 token 限制 (GPT-3.5-turbo 最大 4096)
+        # 根據詳細程度設置適當的 token 限制 - 用戶偏好無字數限制
         token_limits = {
-            'brief': 800,      # <500字目標
-            'medium': 2000,    # 800-1200字目標  
-            'detailed': 4000   # 2000+字目標 (GPT-3.5 限制)
+            'brief': 2000,     # 基本詳細
+            'medium': 4000,    # 中等詳細
+            'detailed': 4096   # 最大詳細 (GPT-3.5 限制)
         }
-        max_tokens = token_limits.get(detail_level, 2000)
+        max_tokens = token_limits.get(detail_level, 4000)
         
         try:
             response = openai.ChatCompletion.create(
