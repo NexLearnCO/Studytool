@@ -31,6 +31,8 @@ import {
   Download,
   Copy,
   Zap,
+  X,
+  Plus,
 } from "lucide-react"
 
 interface AINotesModalProps {
@@ -160,6 +162,12 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setYoutubeUrls([...youtubeUrls, ""])
   }
 
+  const removeYoutubeUrl = (index: number) => {
+    if (youtubeUrls.length > 1) {
+      setYoutubeUrls(youtubeUrls.filter((_, i) => i !== index))
+    }
+  }
+
   const updateYoutubeUrl = (index: number, value: string) => {
     const newUrls = [...youtubeUrls]
     newUrls[index] = value
@@ -277,11 +285,18 @@ export function AINotesModal({ children }: AINotesModalProps) {
                       <SelectValue placeholder="選擇考試制度" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="GSAT">學測</SelectItem>
-                      <SelectItem value="AST">分科測驗</SelectItem>
-                      <SelectItem value="TOEFL">TOEFL</SelectItem>
-                      <SelectItem value="IELTS">IELTS</SelectItem>
-                      <SelectItem value="JLPT">日檢</SelectItem>
+                      <SelectItem value="HKDSE">🇭🇰 HKDSE</SelectItem>
+                      <SelectItem value="IGCSE">🌍 IGCSE/GCSE</SelectItem>
+                      <SelectItem value="IAS">📚 IAS/AS</SelectItem>
+                      <SelectItem value="IAL">📜 IAL/AL</SelectItem>
+                      <SelectItem value="IB">🌍 IB</SelectItem>
+                      <SelectItem value="AP">🇺🇸 AP</SelectItem>
+                      <SelectItem value="SAT">🇺🇸 SAT</SelectItem>
+                      <SelectItem value="IELTS">✈️ IELTS</SelectItem>
+                      <SelectItem value="UCAT">🩺 UCAT</SelectItem>
+                      <SelectItem value="UCATANZ">🏥 UCATANZ</SelectItem>
+                      <SelectItem value="BMAT">⚕️ BMAT</SelectItem>
+                      <SelectItem value="other">📋 其他</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -300,7 +315,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
                       <SelectItem value="history">歷史</SelectItem>
                       <SelectItem value="geography">地理</SelectItem>
                       <SelectItem value="english">英文</SelectItem>
-                      <SelectItem value="chinese">國文</SelectItem>
+                      <SelectItem value="chinese">中文</SelectItem>
                       <SelectItem value="cs">資訊科學</SelectItem>
                     </SelectContent>
                   </Select>
@@ -319,6 +334,20 @@ export function AINotesModal({ children }: AINotesModalProps) {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="language">語言</Label>
+                  <Select value={language} onValueChange={setLanguage}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="zh-tw">🇹🇼 繁體中文</SelectItem>
+                      <SelectItem value="zh-cn">🇨🇳 简体中文</SelectItem>
+                      <SelectItem value="en">🇺🇸 English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
@@ -326,36 +355,53 @@ export function AINotesModal({ children }: AINotesModalProps) {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">學習資源</h3>
               
-              <Tabs defaultValue="youtube" className="space-y-4">
+              <Tabs defaultValue="file" className="space-y-4">
                 <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="file" className="text-xs">
+                    <Upload className="h-4 w-4 mr-1" />
+                    檔案
+                  </TabsTrigger>
                   <TabsTrigger value="youtube" className="text-xs">
                     <Youtube className="h-4 w-4 mr-1" />
                     YouTube
-                  </TabsTrigger>
-                  <TabsTrigger value="text" className="text-xs">
-                    <FileText className="h-4 w-4 mr-1" />
-                    文字
                   </TabsTrigger>
                   <TabsTrigger value="webpage" className="text-xs">
                     <Globe className="h-4 w-4 mr-1" />
                     網頁
                   </TabsTrigger>
-                  <TabsTrigger value="file" className="text-xs">
-                    <Upload className="h-4 w-4 mr-1" />
-                    檔案
+                  <TabsTrigger value="text" className="text-xs">
+                    <FileText className="h-4 w-4 mr-1" />
+                    文字
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="youtube" className="space-y-3">
                   {youtubeUrls.map((url, index) => (
-                    <Input
-                      key={index}
-                      value={url}
-                      onChange={(e) => updateYoutubeUrl(index, e.target.value)}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                    />
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        value={url}
+                        onChange={(e) => updateYoutubeUrl(index, e.target.value)}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        className="flex-1"
+                      />
+                      {youtubeUrls.length > 1 && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => removeYoutubeUrl(index)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   ))}
-                  <Button variant="outline" size="sm" onClick={addYoutubeUrl}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={addYoutubeUrl}
+                    className="w-full"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
                     新增 YouTube 連結
                   </Button>
                 </TabsContent>
@@ -426,7 +472,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
           {/* Right Column - Multi-View Output */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">學習內容生成</h3>
+              <h3 className="text-lg font-semibold">流程說明</h3>
               {generatedNotes && (
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={copyNotes}>
