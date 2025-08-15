@@ -60,6 +60,8 @@ export function AINotesModal({ children }: AINotesModalProps) {
   const [textInput, setTextInput] = useState("")
   const [webpageUrls, setWebpageUrls] = useState([""])
   const [files, setFiles] = useState<File[]>([])
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [activeSourceTab, setActiveSourceTab] = useState<string | null>(null)
 
   const resetForm = () => {
     setTitle("")
@@ -72,6 +74,8 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setTextInput("")
     setWebpageUrls([""])
     setFiles([])
+    setSelectedFiles([])
+    setActiveSourceTab(null)
     setGeneratedNotes("")
     setError("")
     setSuccess(false)
@@ -184,11 +188,23 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setWebpageUrls(newUrls)
   }
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (files) {
+      const newFiles = Array.from(files)
+      setSelectedFiles(prev => [...prev, ...newFiles])
+    }
+  }
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index))
+  }
+
   const hasValidSources = () => {
     return youtubeUrls.some(url => url.trim()) || 
            textInput.trim() || 
            webpageUrls.some(url => url.trim()) || 
-           files.length > 0
+           selectedFiles.length > 0
   }
 
   const copyNotes = () => {
@@ -260,8 +276,8 @@ export function AINotesModal({ children }: AINotesModalProps) {
           </Alert>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Left Column - Configuration */}
+        <div className="space-y-6">
+          {/* Configuration Section */}
           <div className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -351,93 +367,171 @@ export function AINotesModal({ children }: AINotesModalProps) {
               </div>
             </div>
 
-            {/* Sources */}
+            {/* File Upload - Primary Feature */}
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold">學習資源</h3>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Upload className="h-5 w-5" />
+                上傳學習資料
+              </h3>
               
-              <Tabs defaultValue="file" className="space-y-4">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="file" className="text-xs">
-                    <Upload className="h-4 w-4 mr-1" />
-                    檔案
-                  </TabsTrigger>
-                  <TabsTrigger value="youtube" className="text-xs">
-                    <Youtube className="h-4 w-4 mr-1" />
-                    YouTube
-                  </TabsTrigger>
-                  <TabsTrigger value="webpage" className="text-xs">
-                    <Globe className="h-4 w-4 mr-1" />
-                    網頁
-                  </TabsTrigger>
-                  <TabsTrigger value="text" className="text-xs">
-                    <FileText className="h-4 w-4 mr-1" />
-                    文字
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="youtube" className="space-y-3">
-                  {youtubeUrls.map((url, index) => (
-                    <div key={index} className="flex gap-2">
-                      <Input
-                        value={url}
-                        onChange={(e) => updateYoutubeUrl(index, e.target.value)}
-                        placeholder="https://www.youtube.com/watch?v=..."
-                        className="flex-1"
-                      />
-                      {youtubeUrls.length > 1 && (
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          onClick={() => removeYoutubeUrl(index)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      )}
+              <div className="border-2 border-dashed border-blue-300 bg-blue-50/50 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                <div className="space-y-4">
+                  <div className="w-16 h-16 mx-auto bg-blue-100 rounded-full flex items-center justify-center">
+                    <Upload className="h-8 w-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="text-lg font-medium text-blue-900 mb-2">
+                      點擊瀏覽或拖放檔案到此處
+                    </h4>
+                    <p className="text-sm text-blue-700 mb-4">
+                      支援文件格式：PDF、DOCX、PPTX、TXT、MD、MP3、M4A、WAV 或圖片
+                    </p>
+                  </div>
+                  <input
+                    type="file"
+                    id="file-upload"
+                    className="hidden"
+                    accept=".pdf,.docx,.pptx,.txt,.md,.mp3,.m4a,.wav,.jpg,.jpeg,.png"
+                    multiple
+                    onChange={handleFileUpload}
+                  />
+                  <Button 
+                    onClick={() => document.getElementById('file-upload')?.click()}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                  >
+                    選擇檔案
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Selected Files Display */}
+              {selectedFiles.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-slate-700">已選擇的檔案：</h4>
+                  {selectedFiles.map((file, index) => (
+                    <div key={index} className="flex items-center justify-between bg-slate-50 p-2 rounded">
+                      <span className="text-sm text-slate-600">{file.name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={addYoutubeUrl}
-                    className="w-full"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    新增 YouTube 連結
-                  </Button>
-                </TabsContent>
+                </div>
+              )}
+            </div>
 
-                <TabsContent value="text">
-                  <Textarea
-                    value={textInput}
-                    onChange={(e) => setTextInput(e.target.value)}
-                    placeholder="貼上或輸入您的文字內容..."
-                    rows={6}
-                  />
-                </TabsContent>
-
-                <TabsContent value="webpage" className="space-y-3">
-                  {webpageUrls.map((url, index) => (
-                    <Input
-                      key={index}
-                      value={url}
-                      onChange={(e) => updateWebpageUrl(index, e.target.value)}
-                      placeholder="https://example.com/article"
-                    />
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addWebpageUrl}>
-                    新增網頁連結
-                  </Button>
-                </TabsContent>
-
-                <TabsContent value="file">
-                  <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
-                    <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
-                    <p className="text-sm text-slate-600 mb-2">拖放檔案或點擊上傳</p>
-                    <Button variant="outline" size="sm">選擇檔案</Button>
-                    <p className="text-xs text-slate-500 mt-2">支援 PDF、DOC、TXT 格式</p>
-                  </div>
-                </TabsContent>
-              </Tabs>
+            {/* Other Sources */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">其他資源</h3>
+              <p className="text-sm text-slate-600">或者從其他來源添加學習資料</p>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <Button 
+                  variant="outline" 
+                  className="h-24 flex-col gap-2"
+                  onClick={() => setActiveSourceTab('youtube')}
+                >
+                  <Youtube className="h-6 w-6 text-red-600" />
+                  <span className="text-sm">YouTube</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-24 flex-col gap-2"
+                  onClick={() => setActiveSourceTab('webpage')}
+                >
+                  <Globe className="h-6 w-6 text-blue-600" />
+                  <span className="text-sm">網頁</span>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="h-24 flex-col gap-2"
+                  onClick={() => setActiveSourceTab('text')}
+                >
+                  <FileText className="h-6 w-6 text-green-600" />
+                  <span className="text-sm">文字</span>
+                </Button>
+              </div>
+              
+              {/* Dynamic Source Input */}
+              {activeSourceTab && (
+                <div className="mt-4 p-4 border rounded-lg bg-slate-50">
+                  {activeSourceTab === 'youtube' && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Youtube className="h-4 w-4 text-red-600" />
+                        YouTube 連結
+                      </h4>
+                      {youtubeUrls.map((url, index) => (
+                        <div key={index} className="flex gap-2">
+                          <Input
+                            value={url}
+                            onChange={(e) => updateYoutubeUrl(index, e.target.value)}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            className="flex-1"
+                          />
+                          {youtubeUrls.length > 1 && (
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => removeYoutubeUrl(index)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={addYoutubeUrl}
+                        className="w-full"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        新增 YouTube 連結
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {activeSourceTab === 'webpage' && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Globe className="h-4 w-4 text-blue-600" />
+                        網頁連結
+                      </h4>
+                      {webpageUrls.map((url, index) => (
+                        <Input
+                          key={index}
+                          value={url}
+                          onChange={(e) => updateWebpageUrl(index, e.target.value)}
+                          placeholder="https://example.com/article"
+                        />
+                      ))}
+                      <Button variant="outline" size="sm" onClick={addWebpageUrl}>
+                        新增網頁連結
+                      </Button>
+                    </div>
+                  )}
+                  
+                  {activeSourceTab === 'text' && (
+                    <div className="space-y-3">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-green-600" />
+                        文字內容
+                      </h4>
+                      <Textarea
+                        value={textInput}
+                        onChange={(e) => setTextInput(e.target.value)}
+                        placeholder="貼上或輸入您的文字內容..."
+                        rows={6}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Generate Button */}
@@ -467,115 +561,6 @@ export function AINotesModal({ children }: AINotesModalProps) {
                 </p>
               </div>
             )}
-          </div>
-
-          {/* Right Column - Multi-View Output */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">流程說明</h3>
-              {generatedNotes && (
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={copyNotes}>
-                    <Copy className="h-4 w-4 mr-1" />
-                    複製
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={downloadNotes}>
-                    <Download className="h-4 w-4 mr-1" />
-                    下載
-                  </Button>
-                </div>
-              )}
-            </div>
-            
-            <div className="border rounded-lg h-96">
-              {generatedNotes ? (
-                <Tabs defaultValue="notes" className="h-full">
-                  <TabsList className="grid w-full grid-cols-4 rounded-t-lg rounded-b-none">
-                    <TabsTrigger value="notes" className="text-xs">
-                      <FileText className="h-4 w-4 mr-1" />
-                      筆記
-                    </TabsTrigger>
-                    <TabsTrigger value="mindmap" className="text-xs">
-                      <Brain className="h-4 w-4 mr-1" />
-                      思維導圖
-                    </TabsTrigger>
-                    <TabsTrigger value="flashcards" className="text-xs">
-                      <Sparkles className="h-4 w-4 mr-1" />
-                      記憶卡片
-                    </TabsTrigger>
-                    <TabsTrigger value="quiz" className="text-xs">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      測驗
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="notes" className="h-80 overflow-y-auto p-4 m-0">
-                    <div className="prose prose-slate max-w-none">
-                      <div 
-                        className="whitespace-pre-wrap font-sans text-sm leading-relaxed"
-                        dangerouslySetInnerHTML={{ __html: generatedNotes.replace(/\n/g, '<br/>') }}
-                      />
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="mindmap" className="h-80 p-4 m-0">
-                    <div className="h-full bg-slate-50 rounded flex items-center justify-center">
-                      <div className="text-center text-slate-500">
-                        <Brain className="h-12 w-12 mx-auto mb-3" />
-                        <p className="font-medium">思維導圖功能</p>
-                        <p className="text-sm mt-1 mb-3">基於生成的筆記創建可視化思維導圖</p>
-                        <Button variant="outline" size="sm">
-                          <Brain className="h-4 w-4 mr-1" />
-                          生成思維導圖
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="flashcards" className="h-80 p-4 m-0">
-                    <div className="h-full bg-slate-50 rounded flex items-center justify-center">
-                      <div className="text-center text-slate-500">
-                        <Sparkles className="h-12 w-12 mx-auto mb-3" />
-                        <p className="font-medium">記憶卡片生成</p>
-                        <p className="text-sm mt-1 mb-3">從筆記內容提取關鍵概念生成記憶卡片</p>
-                        <Button variant="outline" size="sm">
-                          <Sparkles className="h-4 w-4 mr-1" />
-                          生成記憶卡片
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="quiz" className="h-80 p-4 m-0">
-                    <div className="h-full bg-slate-50 rounded flex items-center justify-center">
-                      <div className="text-center text-slate-500">
-                        <CheckCircle className="h-12 w-12 mx-auto mb-3" />
-                        <p className="font-medium">智能測驗生成</p>
-                        <p className="text-sm mt-1 mb-3">基於筆記內容自動生成測驗題目</p>
-                        <Button variant="outline" size="sm">
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          生成測驗
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              ) : (
-                <div className="h-full flex items-center justify-center text-slate-400">
-                  <div className="text-center">
-                    <FileText className="h-12 w-12 mx-auto mb-3" />
-                    <p>學習內容將在生成後顯示</p>
-                    <p className="text-sm mt-1">請先配置參數並提供學習資源</p>
-                    <div className="flex gap-2 mt-4 justify-center">
-                      <Badge variant="outline">📝 筆記</Badge>
-                      <Badge variant="outline">🧠 思維導圖</Badge>
-                      <Badge variant="outline">🃏 記憶卡片</Badge>
-                      <Badge variant="outline">❓ 測驗</Badge>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </DialogContent>
