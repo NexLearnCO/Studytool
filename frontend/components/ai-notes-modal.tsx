@@ -128,8 +128,22 @@ export function AINotesModal({ children }: AINotesModalProps) {
       const result = await response.json()
 
       if (result.success) {
-        setGeneratedNotes(result.notes)
-        setSuccess(true)
+        // Save to session storage for result page
+        const resultData = {
+          id: Date.now().toString(),
+          title: requestData.title,
+          notes: result.notes,
+          config: requestData,
+          timestamp: new Date().toISOString(),
+          wordCount: result.wordCount || result.notes.length,
+          processingTime: result.processingTime || 'N/A'
+        }
+        
+        sessionStorage.setItem('aiNotesResult', JSON.stringify(resultData))
+        
+        // Close modal and redirect to result page
+        setOpen(false)
+        window.location.href = `/ai-notes/result/${resultData.id}`
       } else {
         throw new Error(result.error || '生成筆記失敗')
       }
