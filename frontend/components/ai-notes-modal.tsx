@@ -88,6 +88,24 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setProgress(0)
 
     try {
+      // Convert files to base64 for transmission
+      const filePromises = selectedFiles.map(async (file) => {
+        return new Promise((resolve) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            resolve({
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              data: reader.result
+            })
+          }
+          reader.readAsDataURL(file)
+        })
+      })
+
+      const processedFiles = await Promise.all(filePromises)
+
       // Build request data to match backend API
       const requestData = {
         title: title || "AI 生成筆記",
@@ -100,7 +118,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
           youtube: youtubeUrls.filter(url => url.trim()),
           text: textInput.trim() ? [textInput.trim()] : [],
           webpages: webpageUrls.filter(url => url.trim()),
-          files: [] // files will be handled separately if needed
+          files: processedFiles
         }
       }
 

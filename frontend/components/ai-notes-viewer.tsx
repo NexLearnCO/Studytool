@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Edit, Eye, Save, X } from 'lucide-react'
 import PreviewMode from './preview-mode'
@@ -19,24 +19,40 @@ export default function AINotesViewer({
 }: AINotesViewerProps) {
   const [mode, setMode] = useState<'preview' | 'edit'>('preview')
   const [editingNotes, setEditingNotes] = useState(aiNotes)
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // Update editingNotes when aiNotes changes from parent
+  useEffect(() => {
+    if (mode === 'preview') {
+      setEditingNotes(aiNotes)
+    }
+  }, [aiNotes, mode])
 
   const handleEditStart = () => {
     setEditingNotes(aiNotes)
+    setHasChanges(false)
     setMode('edit')
   }
 
   const handleEditCancel = () => {
+    if (hasChanges) {
+      const confirmCancel = window.confirm('您有未保存的更改，確定要取消嗎？')
+      if (!confirmCancel) return
+    }
     setEditingNotes(aiNotes) // Reset to original
+    setHasChanges(false)
     setMode('preview')
   }
 
   const handleSaveEdit = () => {
     onNotesChange(editingNotes) // Save the edited notes
+    setHasChanges(false)
     setMode('preview')
   }
 
   const handleNotesChange = (notes: string) => {
     setEditingNotes(notes)
+    setHasChanges(notes !== aiNotes)
   }
 
   return (
