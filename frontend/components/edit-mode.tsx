@@ -30,8 +30,16 @@ let TurndownService: any = null
 let turndownPluginGfm: any = null
 
 if (typeof window !== 'undefined') {
-  TurndownService = require('turndown')
-  turndownPluginGfm = require('turndown-plugin-gfm')
+  try {
+    const turndownModule = require('turndown')
+    const gfmModule = require('turndown-plugin-gfm')
+    
+    // Handle different export formats
+    TurndownService = turndownModule.default || turndownModule
+    turndownPluginGfm = gfmModule.default || gfmModule
+  } catch (error) {
+    console.warn('Failed to load Turndown modules:', error)
+  }
 }
 
 interface EditModeProps {

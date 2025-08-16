@@ -124,12 +124,12 @@ class YouTubeService:
                     'ignoreerrors': False,
                 }
                 
-                # Try multiple format strategies - prioritize MP3 and audio formats
+                # Try multiple format strategies - prioritize M4A (most successful)
                 formats_to_try = [
-                    'bestaudio[ext=mp3]',           # Best quality MP3
-                    'worstaudio[ext=mp3]',          # Worst quality MP3  
-                    'bestaudio[ext=m4a]',           # Best M4A
+                    'bestaudio[ext=m4a]',           # Best M4A (most reliable)
                     'worstaudio[ext=m4a]',          # Worst M4A
+                    'bestaudio[ext=mp3]',           # Best quality MP3
+                    'worstaudio[ext=mp3]',          # Worst quality MP3
                     'bestaudio[ext=webm]',          # Best WebM audio
                     'worstaudio[ext=webm]',         # Worst WebM audio
                     'bestaudio/best',               # Any best audio

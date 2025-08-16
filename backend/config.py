@@ -29,7 +29,7 @@ class Config:
     
     # OpenAI settings
     OPENAI_MODEL = "gpt-3.5-turbo"
-    OPENAI_MAX_TOKENS = 4000  # Increased for comprehensive notes
+    OPENAI_MAX_TOKENS = 6000  # Further increased for comprehensive notes
     OPENAI_TEMPERATURE = 0.3
     
     # Note generation settings
