@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Edit, Eye, Save, X } from 'lucide-react'
 import PreviewMode from './preview-mode'
 import SimpleEditMode from './simple-edit-mode'
+import LexicalWYSIWYG from './lexical-wysiwyg'
 
 interface AINotesViewerProps {
   aiNotes: string
@@ -20,6 +21,7 @@ export default function AINotesViewer({
   const [mode, setMode] = useState<'preview' | 'edit'>('preview')
   const [editingNotes, setEditingNotes] = useState(aiNotes)
   const [hasChanges, setHasChanges] = useState(false)
+  const [editorType, setEditorType] = useState<'simple' | 'wysiwyg'>('wysiwyg')
 
   // Update editingNotes when aiNotes changes from parent
   useEffect(() => {
@@ -76,6 +78,27 @@ export default function AINotesViewer({
         </div>
 
         <div className="flex items-center gap-2">
+          {mode === 'edit' && (
+            <div className="flex items-center gap-1 mr-2">
+              <span className="text-xs text-gray-500">編輯器:</span>
+              <Button
+                variant={editorType === 'wysiwyg' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setEditorType('wysiwyg')}
+                className="text-xs px-2 py-1"
+              >
+                WYSIWYG
+              </Button>
+              <Button
+                variant={editorType === 'simple' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setEditorType('simple')}
+                className="text-xs px-2 py-1"
+              >
+                Markdown
+              </Button>
+            </div>
+          )}
           {mode === 'preview' ? (
             <Button
               variant="outline"
@@ -117,10 +140,17 @@ export default function AINotesViewer({
             <PreviewMode markdown={aiNotes} />
           </div>
         ) : (
-          <SimpleEditMode 
-            markdown={editingNotes}
-            onChange={handleNotesChange}
-          />
+          editorType === 'wysiwyg' ? (
+            <LexicalWYSIWYG 
+              markdown={editingNotes}
+              onChange={handleNotesChange}
+            />
+          ) : (
+            <SimpleEditMode 
+              markdown={editingNotes}
+              onChange={handleNotesChange}
+            />
+          )
         )}
       </div>
     </div>
