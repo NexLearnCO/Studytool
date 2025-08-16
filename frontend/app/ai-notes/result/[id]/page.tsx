@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import MarkmapViewer from "@/components/markmap-viewer"
+import AINotesViewer from "@/components/ai-notes-viewer"
 import {
   Brain,
   FileText,
@@ -236,29 +238,7 @@ export default function AINotesResultPage() {
                       您可以編輯內容後保存到筆記庫
                     </CardDescription>
                   </div>
-                  <Button
-                    variant={isEditing ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      if (isEditing) {
-                        handleSaveEdit()
-                      } else {
-                        setIsEditing(true)
-                      }
-                    }}
-                  >
-                    {isEditing ? (
-                      <>
-                        <Save className="h-4 w-4 mr-1" />
-                        保存編輯
-                      </>
-                    ) : (
-                      <>
-                        <Edit className="h-4 w-4 mr-1" />
-                        編輯
-                      </>
-                    )}
-                  </Button>
+{/* 編輯功能已整合到 AINotesViewer 中 */}
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -282,34 +262,40 @@ export default function AINotesResultPage() {
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="notes" className="p-6 m-0">
-                    {isEditing ? (
-                      <Textarea
-                        value={editableNotes}
-                        onChange={(e) => setEditableNotes(e.target.value)}
-                        className="min-h-[500px] text-sm leading-relaxed font-mono"
-                        placeholder="編輯您的筆記內容..."
-                      />
-                    ) : (
-                      <div className="prose prose-slate max-w-none min-h-[500px]">
-                        <div 
-                          className="whitespace-pre-wrap text-sm leading-relaxed"
-                          dangerouslySetInnerHTML={{ __html: editableNotes.replace(/\n/g, '<br/>') }}
-                        />
-                      </div>
-                    )}
+                  <TabsContent value="notes" className="p-0 m-0">
+                    <AINotesViewer
+                      aiNotes={editableNotes}
+                      onNotesChange={(newNotes) => {
+                        setEditableNotes(newNotes)
+                        if (resultData) {
+                          const updatedData = {
+                            ...resultData,
+                            notes: newNotes,
+                            lastEdited: new Date().toISOString()
+                          }
+                          setResultData(updatedData)
+                          sessionStorage.setItem('aiNotesResult', JSON.stringify(updatedData))
+                        }
+                      }}
+                    />
                   </TabsContent>
 
                   <TabsContent value="mindmap" className="p-6 m-0">
-                    <div className="h-96 bg-slate-50 rounded flex items-center justify-center">
-                      <div className="text-center text-slate-500">
-                        <Brain className="h-16 w-16 mx-auto mb-4 text-slate-400" />
-                        <h3 className="font-medium text-lg mb-2">思維導圖生成</h3>
-                        <p className="text-sm mb-4">基於您的筆記內容自動生成思維導圖</p>
-                        <Button variant="outline">
-                          <Brain className="h-4 w-4 mr-2" />
-                          生成思維導圖
-                        </Button>
+                    <div className="bg-white rounded-lg border">
+                      <div className="p-4 border-b">
+                        <h3 className="font-medium text-lg flex items-center gap-2">
+                          <Brain className="h-5 w-5 text-blue-600" />
+                          智能思維導圖
+                        </h3>
+                        <p className="text-sm text-gray-500 mt-1">
+                          基於您的筆記內容自動生成的可交互思維導圖
+                        </p>
+                      </div>
+                      <div className="p-0">
+                        <MarkmapViewer 
+                          markdown={editableNotes} 
+                          className="min-h-[700px]"
+                        />
                       </div>
                     </div>
                   </TabsContent>
