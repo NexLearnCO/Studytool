@@ -124,14 +124,20 @@ class YouTubeService:
                     'ignoreerrors': False,
                 }
                 
-                # Try multiple format strategies
+                # Try multiple format strategies - prioritize MP3 and audio formats
                 formats_to_try = [
-                    'worstaudio/worst',
-                    'bestaudio/best',
-                    'best[height<=720]',
-                    'worst[height<=720]',
-                    'best',
-                    'worst'
+                    'bestaudio[ext=mp3]',           # Best quality MP3
+                    'worstaudio[ext=mp3]',          # Worst quality MP3  
+                    'bestaudio[ext=m4a]',           # Best M4A
+                    'worstaudio[ext=m4a]',          # Worst M4A
+                    'bestaudio[ext=webm]',          # Best WebM audio
+                    'worstaudio[ext=webm]',         # Worst WebM audio
+                    'bestaudio/best',               # Any best audio
+                    'worstaudio/worst',             # Any worst audio
+                    'best[height<=720]',            # Low quality video
+                    'worst[height<=720]',           # Lowest quality video
+                    'best',                         # Any best format
+                    'worst'                         # Any worst format
                 ]
                 
                 info = None
@@ -164,14 +170,39 @@ class YouTubeService:
                 
                 print(f"Audio downloaded: {os.path.basename(audio_file)}")
                 
+                # Check file size before transcription
+                file_size_mb = os.path.getsize(audio_file) / (1024 * 1024)
+                print(f"File size: {file_size_mb:.2f} MB")
+                
+                if file_size_mb > 25:
+                    raise Exception(f"File too large: {file_size_mb:.2f} MB (max 25MB)")
+                
                 # Transcribe using OpenAI Whisper
                 print("Transcribing with OpenAI Whisper...")
-                with open(audio_file, 'rb') as f:
-                    response = openai.Audio.transcribe(
-                        model="whisper-1",
-                        file=f,
-                        response_format="text"
-                    )
+                try:
+                    with open(audio_file, 'rb') as f:
+                        response = openai.Audio.transcribe(
+                            model="whisper-1",
+                            file=f,
+                            response_format="text"
+                        )
+                except Exception as whisper_error:
+                    print(f"Whisper API error: {whisper_error}")
+                    # Try to rename file extension if it's a format issue
+                    if "Invalid file format" in str(whisper_error) and audio_file.endswith('.mp4'):
+                        print("Trying to rename .mp4 to .m4a for Whisper compatibility...")
+                        new_audio_file = audio_file.replace('.mp4', '.m4a')
+                        os.rename(audio_file, new_audio_file)
+                        audio_file = new_audio_file
+                        
+                        with open(audio_file, 'rb') as f:
+                            response = openai.Audio.transcribe(
+                                model="whisper-1",
+                                file=f,
+                                response_format="text"
+                            )
+                    else:
+                        raise whisper_error
                 
                 transcript = response.strip()
                 
