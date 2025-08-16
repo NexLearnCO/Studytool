@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Edit, Eye, Save, X } from 'lucide-react'
 import PreviewMode from './preview-mode'
-import EditMode from './edit-mode'
+import SimpleEditMode from './simple-edit-mode'
 
 interface AINotesViewerProps {
   aiNotes: string
@@ -117,7 +117,7 @@ export default function AINotesViewer({
             <PreviewMode markdown={aiNotes} />
           </div>
         ) : (
-          <EditMode 
+          <SimpleEditMode 
             markdown={editingNotes}
             onChange={handleNotesChange}
           />
