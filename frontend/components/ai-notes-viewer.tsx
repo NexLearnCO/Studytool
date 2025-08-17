@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Edit, Eye, Save, X } from 'lucide-react'
 import PreviewMode from './preview-mode'
 import SimpleEditMode from './simple-edit-mode'
-import LexicalWYSIWYG from './lexical-wysiwyg'
+import DynamicBlockNoteEditor from './dynamic-blocknote-editor'
 
 interface AINotesViewerProps {
   aiNotes: string
@@ -141,9 +141,10 @@ export default function AINotesViewer({
           </div>
         ) : (
           editorType === 'wysiwyg' ? (
-            <LexicalWYSIWYG 
+            <DynamicBlockNoteEditor 
               markdown={editingNotes}
               onChange={handleNotesChange}
+              className="p-6"
             />
           ) : (
             <SimpleEditMode 
