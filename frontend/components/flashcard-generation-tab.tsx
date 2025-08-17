@@ -87,7 +87,7 @@ export default function FlashcardGenerationTab({
     
     try {
       // 調用後端 API 生成閃卡
-      const response = await fetch('/api/generate-flashcards', {
+      const response = await fetch('http://localhost:5000/api/generate-flashcards-from-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +101,8 @@ export default function FlashcardGenerationTab({
       })
 
       if (!response.ok) {
-        throw new Error('生成失敗')
+        const errorData = await response.json().catch(() => ({ error: '未知錯誤' }))
+        throw new Error(`生成失敗: ${errorData.error || response.statusText}`)
       }
 
       const data = await response.json()

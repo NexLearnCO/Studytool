@@ -32,18 +32,23 @@ class FlashcardService:
             生成的閃卡列表
         """
         try:
-            # 構建專門的閃卡生成 prompt
-            prompt = self._build_flashcard_prompt(content, title, card_count, difficulty)
-            
-            # 調用 OpenAI API
-            response = self.openai_service.generate_content(
-                prompt=prompt,
-                max_tokens=3000,
-                temperature=0.7
+            # 直接使用現有的 OpenAI 閃卡生成方法
+            response = self.openai_service.generate_flashcards(
+                notes=content,
+                count=card_count,
+                difficulty=difficulty
             )
             
-            # 解析 AI 回應
-            flashcards = self._parse_flashcard_response(response)
+            # 解析和轉換為統一格式
+            if isinstance(response, str):
+                # 如果返回的是字符串，嘗試解析 JSON
+                flashcards = self._parse_flashcard_response(response)
+            elif isinstance(response, list):
+                # 如果已經是列表，直接使用
+                flashcards = response
+            else:
+                # 其他情況，嘗試作為字典處理
+                flashcards = response.get('flashcards', []) if isinstance(response, dict) else []
             
             # 驗證和清理結果
             validated_cards = self._validate_flashcards(flashcards, card_count)

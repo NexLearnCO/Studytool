@@ -319,8 +319,8 @@ def unified_notes():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/generate-flashcards', methods=['POST'])
-def generate_flashcards():
+@app.route('/api/generate-flashcards-from-notes', methods=['POST'])
+def generate_flashcards_from_notes():
     """從筆記內容生成閃卡"""
     try:
         data = request.get_json()
