@@ -239,18 +239,18 @@ class FlashcardService:
         prompt = self._build_enhanced_flashcard_prompt(content, title, card_count, difficulty)
         
         try:
-            # 使用現有的 OpenAI 服務，但用自定義 prompt
-            response = self.openai_service.generate_content(prompt)
-            return response
-            
-        except Exception as e:
-            print(f"自定義 prompt 生成失敗: {str(e)}")
-            # 降級到現有方法
-            return self.openai_service.generate_flashcards(
+            # 直接使用現有的 OpenAI 閃卡生成方法
+            response = self.openai_service.generate_flashcards(
                 notes=content,
                 count=card_count,
                 difficulty=difficulty
             )
+            return response
+            
+        except Exception as e:
+            print(f"閃卡生成失敗: {str(e)}")
+            # 生成備用閃卡
+            return self._generate_fallback_cards(content, card_count)
     
     def _build_enhanced_flashcard_prompt(self, content: str, title: str, card_count: int, difficulty: str) -> str:
         """構建增強的閃卡生成 prompt"""
