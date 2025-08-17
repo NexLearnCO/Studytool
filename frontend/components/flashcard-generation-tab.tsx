@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -67,11 +67,15 @@ interface FlashcardDeck {
 interface FlashcardGenerationTabProps {
   noteContent: string
   noteTitle: string
+  savedData?: any
+  onDataChange?: (data: any) => void
 }
 
 export default function FlashcardGenerationTab({ 
   noteContent, 
-  noteTitle 
+  noteTitle,
+  savedData,
+  onDataChange
 }: FlashcardGenerationTabProps) {
   const [generationStep, setGenerationStep] = useState<"configure" | "generating" | "review">("configure")
   const [generatedCards, setGeneratedCards] = useState<Flashcard[]>([])
@@ -80,6 +84,41 @@ export default function FlashcardGenerationTab({
   const [cardCount, setCardCount] = useState("10")
   const [difficulty, setDifficulty] = useState("mixed")
   const [success, setSuccess] = useState(false)
+  
+  // 編輯狀態
+  const [editingCardId, setEditingCardId] = useState<string | null>(null)
+  const [editingCard, setEditingCard] = useState<Partial<Flashcard> | null>(null)
+  
+  // 防止初始加載時觸發保存
+  const [isInitialized, setIsInitialized] = useState(false)
+
+  // 從父組件加載保存的數據
+  useEffect(() => {
+    if (savedData) {
+      setGenerationStep(savedData.generationStep || "configure")
+      setGeneratedCards(savedData.generatedCards || [])
+      setDeckName(savedData.deckName || `${noteTitle} - 閃卡`)
+      setCardCount(savedData.cardCount || "10")
+      setDifficulty(savedData.difficulty || "mixed")
+    }
+    // 標記為已初始化
+    setIsInitialized(true)
+  }, [savedData, noteTitle])
+
+  // 當關鍵狀態改變時自動保存
+  useEffect(() => {
+    if (isInitialized && generatedCards.length > 0 && onDataChange) {
+      const currentData = {
+        generationStep,
+        generatedCards,
+        deckName,
+        cardCount,
+        difficulty,
+        lastSaved: new Date().toISOString()
+      }
+      onDataChange(currentData)
+    }
+  }, [generatedCards.length, generationStep, isInitialized]) // 只在初始化後且有數據時保存
 
   const generateFlashcards = async () => {
     setIsGenerating(true)
@@ -145,13 +184,25 @@ export default function FlashcardGenerationTab({
   }
 
   const editCard = (cardId: string, updates: Partial<Flashcard>) => {
-    setGeneratedCards(cards =>
-      cards.map(card =>
-        card.id === cardId
-          ? { ...card, ...updates, updatedAt: new Date() }
-          : card
-      )
+    const updatedCards = generatedCards.map(card =>
+      card.id === cardId
+        ? { ...card, ...updates, updatedAt: new Date() }
+        : card
     )
+    setGeneratedCards(updatedCards)
+    
+    // 編輯後立即保存
+    if (onDataChange && isInitialized) {
+      const currentData = {
+        generationStep,
+        generatedCards: updatedCards,
+        deckName,
+        cardCount,
+        difficulty,
+        lastSaved: new Date().toISOString()
+      }
+      onDataChange(currentData)
+    }
   }
 
   const deleteCard = (cardId: string) => {
@@ -194,6 +245,59 @@ export default function FlashcardGenerationTab({
     setGenerationStep("configure")
     setGeneratedCards([])
     setIsGenerating(false)
+  }
+
+  // 編輯相關函數
+  const startEditing = (card: Flashcard) => {
+    setEditingCardId(card.id)
+    setEditingCard({
+      question: card.question,
+      answer: card.answer,
+      hint: card.hint || '',
+      difficulty: card.difficulty || 3
+    })
+  }
+
+  const cancelEditing = () => {
+    setEditingCardId(null)
+    setEditingCard(null)
+  }
+
+  const saveEditing = () => {
+    if (editingCardId && editingCard) {
+      editCard(editingCardId, {
+        question: editingCard.question || '',
+        answer: editingCard.answer || '',
+        hint: editingCard.hint || '',
+        difficulty: editingCard.difficulty || 3
+      })
+      setEditingCardId(null)
+      setEditingCard(null)
+    }
+  }
+
+  const updateEditingCard = (field: keyof Flashcard, value: any) => {
+    setEditingCard(prev => prev ? { ...prev, [field]: value } : null)
+  }
+
+  const createNewCard = () => {
+    const newCard: Flashcard = {
+      id: `card_${Date.now()}_new`,
+      source: 'manual' as const,
+      sourceId: noteTitle,
+      question: '',
+      answer: '',
+      hint: '',
+      difficulty: 3,
+      tags: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      reviewCount: 0,
+      isSelected: true
+    }
+    
+    setGeneratedCards(prev => [...prev, newCard])
+    startEditing(newCard)
   }
 
   if (generationStep === "configure") {
@@ -299,6 +403,10 @@ export default function FlashcardGenerationTab({
             </p>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={createNewCard}>
+              <Plus className="h-4 w-4 mr-2" />
+              新增卡片
+            </Button>
             <Button variant="outline" onClick={resetGeneration}>
               重新生成
             </Button>
@@ -327,7 +435,7 @@ export default function FlashcardGenerationTab({
                     )}
                   </div>
                   <div className="flex gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => {}}>
+                    <Button size="sm" variant="ghost" onClick={() => startEditing(card)}>
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => deleteCard(card.id)}>
@@ -337,18 +445,80 @@ export default function FlashcardGenerationTab({
                 </div>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div>
-                  <div className="text-sm font-medium text-gray-700 mb-1">問題</div>
-                  <div className="text-sm bg-blue-50 p-3 rounded">{card.question}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-gray-700 mb-1">答案</div>
-                  <div className="text-sm bg-gray-50 p-3 rounded">{card.answer}</div>
-                </div>
-                {card.hint && (
+                {editingCardId === card.id ? (
+                  // 編輯模式
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-2">問題</div>
+                      <Textarea
+                        value={editingCard?.question || ''}
+                        onChange={(e) => updateEditingCard('question', e.target.value)}
+                        placeholder="輸入問題..."
+                        className="min-h-[80px]"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-2">答案</div>
+                      <Textarea
+                        value={editingCard?.answer || ''}
+                        onChange={(e) => updateEditingCard('answer', e.target.value)}
+                        placeholder="輸入答案..."
+                        className="min-h-[80px]"
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-2">提示 (可選)</div>
+                      <Input
+                        value={editingCard?.hint || ''}
+                        onChange={(e) => updateEditingCard('hint', e.target.value)}
+                        placeholder="輸入提示..."
+                      />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-2">難度</div>
+                      <Select 
+                        value={(editingCard?.difficulty || 3).toString()} 
+                        onValueChange={(value) => updateEditingCard('difficulty', parseInt(value))}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 - 簡單</SelectItem>
+                          <SelectItem value="2">2 - 容易</SelectItem>
+                          <SelectItem value="3">3 - 中等</SelectItem>
+                          <SelectItem value="4">4 - 困難</SelectItem>
+                          <SelectItem value="5">5 - 很難</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex gap-2 pt-2">
+                      <Button size="sm" onClick={saveEditing}>
+                        <Save className="h-4 w-4 mr-1" />
+                        保存
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={cancelEditing}>
+                        取消
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // 預覽模式
                   <div>
-                    <div className="text-sm font-medium text-gray-700 mb-1">提示</div>
-                    <div className="text-sm bg-yellow-50 p-3 rounded text-yellow-800">{card.hint}</div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-1">問題</div>
+                      <div className="text-sm bg-blue-50 p-3 rounded">{card.question}</div>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 mb-1">答案</div>
+                      <div className="text-sm bg-gray-50 p-3 rounded">{card.answer}</div>
+                    </div>
+                    {card.hint && (
+                      <div>
+                        <div className="text-sm font-medium text-gray-700 mb-1">提示</div>
+                        <div className="text-sm bg-yellow-50 p-3 rounded text-yellow-800">{card.hint}</div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>

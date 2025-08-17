@@ -48,6 +48,9 @@ export default function AINotesResultPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [activeTab, setActiveTab] = useState("notes")
   const [success, setSuccess] = useState(false)
+  
+  // 閃卡狀態管理
+  const [flashcardData, setFlashcardData] = useState<any>(null)
 
   useEffect(() => {
     // Load result data from session storage
@@ -60,7 +63,19 @@ export default function AINotesResultPage() {
       // Redirect back if no data
       router.push('/')
     }
-  }, [router])
+    
+    // Load flashcard data from localStorage
+    const flashcardKey = `flashcards_${params.id}`
+    const storedFlashcards = localStorage.getItem(flashcardKey)
+    if (storedFlashcards) {
+      try {
+        const flashcardData = JSON.parse(storedFlashcards)
+        setFlashcardData(flashcardData)
+      } catch (error) {
+        console.error('Failed to parse flashcard data:', error)
+      }
+    }
+  }, [router, params.id])
 
   const handleSaveEdit = () => {
     if (resultData) {
@@ -75,6 +90,13 @@ export default function AINotesResultPage() {
       setSuccess(true)
       setTimeout(() => setSuccess(false), 2000)
     }
+  }
+
+  // 保存閃卡數據到 localStorage
+  const handleFlashcardDataChange = (data: any) => {
+    setFlashcardData(data)
+    const flashcardKey = `flashcards_${params.id}`
+    localStorage.setItem(flashcardKey, JSON.stringify(data))
   }
 
   const copyNotes = async () => {
@@ -305,6 +327,8 @@ export default function AINotesResultPage() {
                     <FlashcardGenerationTab 
                       noteContent={editableNotes}
                       noteTitle={resultData.title}
+                      savedData={flashcardData}
+                      onDataChange={handleFlashcardDataChange}
                     />
                   </TabsContent>
 
