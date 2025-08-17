@@ -4,6 +4,7 @@ from config import Config
 from services.youtube_service import YouTubeService
 from services.openai_service import OpenAIService
 from services.pdf_service import PDFService
+from services.flashcard_service import FlashcardService
 import json
 
 # Initialize Flask app
@@ -14,6 +15,7 @@ CORS(app)
 youtube_service = YouTubeService()
 openai_service = OpenAIService()
 pdf_service = PDFService()
+flashcard_service = FlashcardService()
 
 @app.route('/')
 def home():
@@ -316,6 +318,43 @@ def unified_notes():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/api/generate-flashcards', methods=['POST'])
+def generate_flashcards():
+    """從筆記內容生成閃卡"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'error': '沒有提供數據'}), 400
+        
+        content = data.get('content', '')
+        title = data.get('title', '')
+        card_count = data.get('cardCount', 10)
+        difficulty = data.get('difficulty', 'mixed')
+        
+        if not content:
+            return jsonify({'error': '筆記內容不能為空'}), 400
+        
+        # 生成閃卡
+        flashcards = flashcard_service.generate_flashcards_from_note(
+            content=content,
+            title=title,
+            card_count=card_count,
+            difficulty=difficulty
+        )
+        
+        return jsonify({
+            'success': True,
+            'flashcards': flashcards,
+            'total': len(flashcards)
+        })
+        
+    except Exception as e:
+        print(f"生成閃卡時發生錯誤: {str(e)}")
+        return jsonify({
+            'error': f'生成閃卡失敗: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     app.run(

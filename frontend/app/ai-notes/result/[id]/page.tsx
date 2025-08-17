@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import MarkmapViewer from "@/components/markmap-viewer"
 import AINotesViewer from "@/components/ai-notes-viewer"
+import FlashcardGenerationTab from "@/components/flashcard-generation-tab"
 import {
   Brain,
   FileText,
@@ -301,17 +302,10 @@ export default function AINotesResultPage() {
                   </TabsContent>
 
                   <TabsContent value="flashcards" className="p-6 m-0">
-                    <div className="h-96 bg-slate-50 rounded flex items-center justify-center">
-                      <div className="text-center text-slate-500">
-                        <Sparkles className="h-16 w-16 mx-auto mb-4 text-slate-400" />
-                        <h3 className="font-medium text-lg mb-2">記憶卡片生成</h3>
-                        <p className="text-sm mb-4">從筆記內容提取關鍵概念生成記憶卡片</p>
-                        <Button variant="outline">
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          生成記憶卡片
-                        </Button>
-                      </div>
-                    </div>
+                    <FlashcardGenerationTab 
+                      noteContent={editableNotes}
+                      noteTitle={resultData.title}
+                    />
                   </TabsContent>
 
                   <TabsContent value="quiz" className="p-6 m-0">
