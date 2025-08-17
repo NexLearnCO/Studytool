@@ -32,12 +32,8 @@ class FlashcardService:
             生成的閃卡列表
         """
         try:
-            # 直接使用現有的 OpenAI 閃卡生成方法
-            response = self.openai_service.generate_flashcards(
-                notes=content,
-                count=card_count,
-                difficulty=difficulty
-            )
+            # 使用自定義高質量 prompt 生成閃卡
+            response = self._generate_with_custom_prompt(content, title, card_count, difficulty)
             
             # 解析和轉換為統一格式
             if isinstance(response, str):
@@ -50,8 +46,11 @@ class FlashcardService:
                 # 其他情況，嘗試作為字典處理
                 flashcards = response.get('flashcards', []) if isinstance(response, dict) else []
             
+            # 為每張卡片添加智能難度分級
+            flashcards_with_difficulty = self._assign_intelligent_difficulty(flashcards, difficulty)
+            
             # 驗證和清理結果
-            validated_cards = self._validate_flashcards(flashcards, card_count)
+            validated_cards = self._validate_flashcards(flashcards_with_difficulty, card_count)
             
             return validated_cards
             
@@ -129,8 +128,8 @@ class FlashcardService:
     def _parse_flashcard_response(self, response: str) -> List[Dict[str, Any]]:
         """解析 AI 回應中的閃卡 JSON"""
         try:
-            # 嘗試提取 JSON 部分
-            json_match = re.search(r'```json\s*(\{.*?\})\s*```', response, re.DOTALL)
+            # 嘗試提取 JSON 部分（支援數組和對象）
+            json_match = re.search(r'```json\s*(\[.*?\]|\{.*?\})\s*```', response, re.DOTALL)
             if json_match:
                 json_str = json_match.group(1)
             else:
@@ -194,6 +193,146 @@ class FlashcardService:
         except:
             pass
         return 3  # 默認中等難度
+    
+    def _assign_intelligent_difficulty(self, flashcards: List[Dict[str, Any]], difficulty_setting: str) -> List[Dict[str, Any]]:
+        """為閃卡智能分配難度等級"""
+        
+        difficulty_ranges = {
+            "easy": [1, 2, 3],      # 簡單：主要 1-2 級，少量 3 級
+            "mixed": [1, 2, 3, 4, 5], # 混合：全範圍
+            "hard": [3, 4, 5]       # 困難：主要 4-5 級，少量 3 級
+        }
+        
+        available_levels = difficulty_ranges.get(difficulty_setting, [1, 2, 3, 4, 5])
+        
+        for i, card in enumerate(flashcards):
+            # 基於內容複雜度和位置智能分配難度
+            if difficulty_setting == "easy":
+                # 簡單模式：70% 為 1-2 級
+                if i % 10 < 7:
+                    card['difficulty'] = 1 if i % 2 == 0 else 2
+                else:
+                    card['difficulty'] = 3
+            elif difficulty_setting == "hard":
+                # 困難模式：70% 為 4-5 級
+                if i % 10 < 7:
+                    card['difficulty'] = 4 if i % 2 == 0 else 5
+                else:
+                    card['difficulty'] = 3
+            else:
+                # 混合模式：均勻分布
+                card['difficulty'] = available_levels[i % len(available_levels)]
+            
+            # 基於問題長度微調難度
+            question_length = len(card.get('question', ''))
+            if question_length > 100:
+                card['difficulty'] = min(5, card['difficulty'] + 1)
+            elif question_length < 30:
+                card['difficulty'] = max(1, card['difficulty'] - 1)
+        
+        return flashcards
+    
+    def _generate_with_custom_prompt(self, content: str, title: str, card_count: int, difficulty: str) -> str:
+        """使用自定義高質量 prompt 生成閃卡"""
+        
+        # 構建高質量的專業 prompt
+        prompt = self._build_enhanced_flashcard_prompt(content, title, card_count, difficulty)
+        
+        try:
+            # 使用現有的 OpenAI 服務，但用自定義 prompt
+            response = self.openai_service.generate_content(prompt)
+            return response
+            
+        except Exception as e:
+            print(f"自定義 prompt 生成失敗: {str(e)}")
+            # 降級到現有方法
+            return self.openai_service.generate_flashcards(
+                notes=content,
+                count=card_count,
+                difficulty=difficulty
+            )
+    
+    def _build_enhanced_flashcard_prompt(self, content: str, title: str, card_count: int, difficulty: str) -> str:
+        """構建增強的閃卡生成 prompt"""
+        
+        difficulty_guidelines = {
+            "easy": """
+重點關注：
+- 基礎定義和概念
+- 簡單的事實記憶
+- 直接的問答
+- 關鍵詞識別
+難度分布：主要 1-2 級（基礎），少量 3 級（中等）""",
+            
+            "mixed": """
+重點關注：
+- 涵蓋各種認知層次
+- 從記憶到理解到應用
+- 包含不同類型的知識點
+- 平衡簡單和複雜概念
+難度分布：均勻分布 1-5 級""",
+            
+            "hard": """
+重點關注：
+- 深度理解和分析
+- 概念間的關聯
+- 應用和推理能力
+- 批判性思維
+難度分布：主要 4-5 級（困難），少量 3 級（中等）"""
+        }
+        
+        guidelines = difficulty_guidelines.get(difficulty, difficulty_guidelines["mixed"])
+        
+        prompt = f"""
+你是一位資深的教育心理學家和記憶科學專家，專精於設計高效的學習卡片。請基於以下筆記內容生成 {card_count} 張高質量的記憶卡片。
+
+**筆記標題**: {title}
+**內容**: {content}
+
+**生成原則**:
+{guidelines}
+
+**卡片設計標準**:
+1. **問題設計**:
+   - 問題要具體、可測試、無歧義
+   - 使用主動回憶原則
+   - 避免是非題，多用開放式問題
+   - 問題長度適中（20-80字）
+   - 測試理解而非死記硬背
+
+2. **答案設計**:
+   - 答案簡潔但完整
+   - 包含關鍵概念和解釋
+   - 必要時提供記憶技巧
+   - 長度控制在 50-200 字
+
+3. **質量要求**:
+   - 每張卡片聚焦單一概念
+   - 涵蓋筆記中的重要知識點
+   - 避免重複或過於相似
+   - 確保答案在筆記中能找到依據
+
+4. **類型分布**:
+   - 定義類：核心概念的定義和解釋
+   - 應用類：概念的實際應用和例子
+   - 分析類：概念間的關係和差異
+   - 記憶類：重要事實和細節
+
+**輸出格式**（必須是有效的 JSON）:
+```json
+[
+  {{
+    "question": "具體明確的問題",
+    "answer": "簡潔完整的答案",
+    "hint": "記憶提示（可選）",
+    "type": "Definition|Application|Analysis|Memory"
+  }}
+]
+```
+
+**重要**: 確保生成的卡片能有效測試學習者對筆記內容的掌握程度。現在開始生成：
+"""
+        return prompt
     
     def _generate_fallback_cards(self, content: str, card_count: int) -> List[Dict[str, Any]]:
         """生成備用閃卡（當 AI 生成失敗時）"""
