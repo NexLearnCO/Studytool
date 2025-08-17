@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import MarkmapViewer from "@/components/markmap-viewer"
 import AINotesViewer from "@/components/ai-notes-viewer"
 import FlashcardGenerationTab from "@/components/flashcard-generation-tab"
+import QuizGenerationTab from "@/components/quiz-generation-tab"
 import {
   Brain,
   FileText,
@@ -51,6 +52,9 @@ export default function AINotesResultPage() {
   
   // 閃卡狀態管理
   const [flashcardData, setFlashcardData] = useState<any>(null)
+  
+  // Quiz 狀態管理
+  const [quizData, setQuizData] = useState<any>(null)
 
   useEffect(() => {
     // Load result data from session storage
@@ -75,6 +79,18 @@ export default function AINotesResultPage() {
         console.error('Failed to parse flashcard data:', error)
       }
     }
+
+    // Load quiz data from localStorage
+    const quizKey = `quiz_${params.id}`
+    const storedQuiz = localStorage.getItem(quizKey)
+    if (storedQuiz) {
+      try {
+        const quizData = JSON.parse(storedQuiz)
+        setQuizData(quizData)
+      } catch (error) {
+        console.error('Failed to parse quiz data:', error)
+      }
+    }
   }, [router, params.id])
 
   const handleSaveEdit = () => {
@@ -97,6 +113,13 @@ export default function AINotesResultPage() {
     setFlashcardData(data)
     const flashcardKey = `flashcards_${params.id}`
     localStorage.setItem(flashcardKey, JSON.stringify(data))
+  }
+
+  // 保存 Quiz 數據到 localStorage
+  const handleQuizDataChange = (data: any) => {
+    setQuizData(data)
+    const quizKey = `quiz_${params.id}`
+    localStorage.setItem(quizKey, JSON.stringify(data))
   }
 
   const copyNotes = async () => {
@@ -333,17 +356,12 @@ export default function AINotesResultPage() {
                   </TabsContent>
 
                   <TabsContent value="quiz" className="p-6 m-0">
-                    <div className="h-96 bg-slate-50 rounded flex items-center justify-center">
-                      <div className="text-center text-slate-500">
-                        <CheckCircle className="h-16 w-16 mx-auto mb-4 text-slate-400" />
-                        <h3 className="font-medium text-lg mb-2">智能測驗生成</h3>
-                        <p className="text-sm mb-4">基於筆記內容自動生成測驗題目</p>
-                        <Button variant="outline">
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          生成測驗
-                        </Button>
-                      </div>
-                    </div>
+                    <QuizGenerationTab 
+                      noteContent={editableNotes}
+                      noteTitle={resultData.title}
+                      savedData={quizData}
+                      onDataChange={handleQuizDataChange}
+                    />
                   </TabsContent>
                 </Tabs>
               </CardContent>

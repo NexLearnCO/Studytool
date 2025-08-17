@@ -7,6 +7,7 @@
     "dev": "python backend/app.py"
   },
   "dependencies": {
+    "@radix-ui/react-radio-group": "^1.3.8",
     "@tiptap/extension-table": "^3.2.0",
     "@tiptap/extension-table-cell": "^3.2.0",
     "@tiptap/extension-table-header": "^3.2.0",
