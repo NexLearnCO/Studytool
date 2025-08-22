@@ -58,7 +58,7 @@ export default function SimpleBlockNoteUnified({
   }
 
   return (
-    <div className={className}>
+    <div className={`bn-editor ${className}`}>
       <BlockNoteView
         editor={editor}
         editable={editable}

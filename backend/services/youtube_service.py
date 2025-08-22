@@ -8,6 +8,7 @@ import tempfile
 import yt_dlp
 import openai
 import sys
+import time
 
 # Add backend directory to path for imports
 backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -111,33 +112,38 @@ class YouTubeService:
                 # Download audio using yt-dlp
                 print("Downloading audio...")
                 ydl_opts = {
-                    # More flexible format selection
-                    'format': 'worstaudio/worst',  # Get the smallest audio file
+                    # Use more conservative settings for better compatibility
+                    'format': 'bestaudio/best',
                     'outtmpl': os.path.join(temp_dir, '%(title)s.%(ext)s'),
-                    'quiet': False,  # Enable output for debugging
+                    'quiet': False,
                     'no_warnings': False,
-                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    'extractor_retries': 3,
-                    'fragment_retries': 3,
-                    'socket_timeout': 30,
-                    # Force extraction even if format is not available
+                    # Updated user agent for 2025
+                    'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                    'extractor_retries': 5,
+                    'fragment_retries': 5,
+                    'socket_timeout': 60,
                     'ignoreerrors': False,
+                    # Force IPv4 to avoid IPv6 issues
+                    'prefer_ipv4': True,
+                    # Add more headers for better compatibility
+                    'http_headers': {
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Accept-Language': 'en-us,en;q=0.5',
+                        'Accept-Encoding': 'gzip,deflate',
+                        'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+                        'Keep-Alive': '115',
+                        'Connection': 'keep-alive',
+                    },
+                    # Add referer for better access
+                    'referer': 'https://www.youtube.com/',
                 }
                 
-                # Try multiple format strategies - prioritize M4A (most successful)
+                # Simplified format strategy - try the most reliable ones first
                 formats_to_try = [
-                    'bestaudio[ext=m4a]',           # Best M4A (most reliable)
-                    'worstaudio[ext=m4a]',          # Worst M4A
-                    'bestaudio[ext=mp3]',           # Best quality MP3
-                    'worstaudio[ext=mp3]',          # Worst quality MP3
-                    'bestaudio[ext=webm]',          # Best WebM audio
-                    'worstaudio[ext=webm]',         # Worst WebM audio
-                    'bestaudio/best',               # Any best audio
-                    'worstaudio/worst',             # Any worst audio
-                    'best[height<=720]',            # Low quality video
-                    'worst[height<=720]',           # Lowest quality video
-                    'best',                         # Any best format
-                    'worst'                         # Any worst format
+                    'bestaudio[ext=m4a]/bestaudio[ext=mp4]/bestaudio',  # Prefer M4A, fallback to MP4, then any audio
+                    'worst[ext=m4a]/worst[ext=mp4]/worstaudio',         # Smaller files if needed
+                    'bestaudio/best',                                   # Generic best audio/video
+                    'worst/worstvideo',                                 # Last resort - any format
                 ]
                 
                 info = None
@@ -146,10 +152,14 @@ class YouTubeService:
                         ydl_opts['format'] = fmt
                         print(f"Trying format: {fmt}")
                         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                            # Add a small delay to avoid rate limiting
+                            time.sleep(1)
                             info = ydl.extract_info(url, download=True)
                             break
                     except Exception as e:
                         print(f"Format {fmt} failed: {str(e)[:100]}...")
+                        # Add delay before trying next format
+                        time.sleep(2)
                         continue
                 
                 if not info:
@@ -231,19 +241,8 @@ class YouTubeService:
             video_id = YouTubeService.extract_video_id(url)
             print(f"Processing YouTube video: {video_id}")
             
-            # Method 1: Use improved hybrid audio extraction
-            print("Method 1: Trying improved audio extraction with OpenAI Whisper...")
-            try:
-                result = YouTubeService.get_transcript_hybrid(url)
-                if result and result.get('transcript', '').strip():
-                    print(f"Method 1 Success: {len(result['transcript'])} characters")
-                    return result
-            except Exception as e:
-                print(f"Method 1 (Hybrid Audio) failed: {str(e)}")
-                # Continue to other methods
-            
-            # Method 2: Try youtube-transcript-api (fallback)
-            print("Method 2: Trying youtube-transcript-api...")
+            # Method 1: Try youtube-transcript-api first (faster and more reliable)
+            print("Method 1: Trying youtube-transcript-api...")
             try:
                 transcript_data = None
                 
@@ -266,10 +265,10 @@ class YouTubeService:
                 for i, approach in enumerate(approaches):
                     try:
                         transcript_data = approach()
-                        print(f"Method 2 approach {i+1} succeeded")
+                        print(f"Method 1 approach {i+1} succeeded")
                         break
                     except Exception as e:
-                        print(f"Method 2 approach {i+1} failed: {str(e)[:100]}...")
+                        print(f"Method 1 approach {i+1} failed: {str(e)[:100]}...")
                         continue
                 
                 if transcript_data:
@@ -285,11 +284,24 @@ class YouTubeService:
                             'duration': total_duration,
                             'method': 'transcript_api'
                         }
-                        print(f"Method 2 Success: {len(transcript_text)} characters")
+                        print(f"Method 1 Success: {len(transcript_text)} characters")
                         return video_info
                         
             except Exception as e:
-                print(f"Method 2 failed: {str(e)}")
+                print(f"Method 1 failed: {str(e)}")
+            
+            # Method 2: Use improved hybrid audio extraction
+            print("Method 2: Trying improved audio extraction with OpenAI Whisper...")
+            try:
+                result = YouTubeService.get_transcript_hybrid(url)
+                if result and result.get('transcript', '').strip():
+                    print(f"Method 2 Success: {len(result['transcript'])} characters")
+                    return result
+            except Exception as e:
+                print(f"Method 2 (Hybrid Audio) failed: {str(e)}")
+                # Continue to other methods
+            
+
             
             # Method 3: Try alternative browser-like approach
             print("Method 3: Trying alternative browser approach...")
