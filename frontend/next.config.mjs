@@ -10,6 +10,12 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  transpilePackages: [
+    'markmap-common',
+    'markmap-lib',
+    'markmap-view',
+    'markmap-html-parser',
+  ],
 }
 
 export default nextConfig
