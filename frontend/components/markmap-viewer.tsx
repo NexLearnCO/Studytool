@@ -111,37 +111,14 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
             overflow: visible;
           }
 
-          /* 強制 Markmap SVG 樣式 */
+          /* 保留基本 SVG 樣式 */
           .markmap-viewer-container svg {
             background: transparent;
           }
 
-          .markmap-viewer-container .markmap-node > circle {
-            fill: #667eea !important;
-          }
-
-          .markmap-viewer-container .markmap-link {
-            stroke: #667eea !important;
-            stroke-width: 2px !important;
-            fill: none !important;
-          }
-
+          /* 只保留字體樣式，不覆蓋顏色 */
           .markmap-viewer-container .markmap-node text {
-            fill: #333 !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-          }
-
-          /* 確保 D3 路徑有顏色 */
-          .markmap-viewer-container path {
-            stroke: #667eea !important;
-            stroke-width: 2px !important;
-            fill: none !important;
-          }
-
-          .markmap-viewer-container circle {
-            fill: #667eea !important;
-            stroke: #ffffff !important;
-            stroke-width: 2px !important;
           }
         `
         document.head.appendChild(style)
@@ -170,21 +147,16 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
         fitRatio: 0.95,
         spacingVertical: 16,
         spacingHorizontal: 120,
-        duration: 500,
-        color: (node: any) => {
-          // 預設顏色方案 - 更鮮明的顏色
-          const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#43e97b', '#38f9d7']
-          return colors[node.depth % colors.length]
-        },
-
-        paddingX: 8
+        maxWidth: 280,     // 讓長文字自動換行，像官方示例
+        paddingX: 24,      // 增加節點內水平延伸距離，線條會更深入到內容底下
+        duration: 500
+        // 移除 color 配置，讓 Markmap 使用內建配色邏輯
       }, root)
       
-      // 確保初始化後立即適應容器並應用樣式
+      // 確保初始化後立即適應容器
       setTimeout(() => {
         if (mmRef.current) {
           mmRef.current.fit()
-          applyMarkmapStyles()
         }
       }, 100)
 
@@ -215,11 +187,10 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
       
       mmRef.current.setData(root)
       
-      // 延遲執行 fit 以確保數據已正確設置並應用樣式
+      // 延遲執行 fit 以確保數據已正確設置
       setTimeout(() => {
         if (mmRef.current) {
           mmRef.current.fit()
-          applyMarkmapStyles()
         }
       }, 200)
       
@@ -229,40 +200,7 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
     }
   }, [markdown])
 
-  // 手動應用 Markmap 樣式
-  const applyMarkmapStyles = () => {
-    if (!svgRef.current) return
-    
-    const svg = svgRef.current
-    const colors = ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#43e97b', '#38f9d7']
-    
-    // 為所有路徑添加顏色
-    const paths = svg.querySelectorAll('path')
-    paths.forEach((path, index) => {
-      const color = colors[index % colors.length]
-      path.style.stroke = color
-      path.style.strokeWidth = '2px'
-      path.style.fill = 'none'
-    })
-    
-    // 為所有圓圈添加顏色
-    const circles = svg.querySelectorAll('circle')
-    circles.forEach((circle, index) => {
-      const color = colors[index % colors.length]
-      circle.style.fill = color
-      circle.style.stroke = '#ffffff'
-      circle.style.strokeWidth = '2px'
-    })
-    
-    // 確保文字可見
-    const texts = svg.querySelectorAll('text')
-    texts.forEach(text => {
-      text.style.fill = '#333333'
-      text.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-    })
-    
-    console.log('Markmap styles applied manually')
-  }
+
 
   const addZoomControls = () => {
     if (!containerRef.current || containerRef.current.querySelector('.mindmap-controls')) {
