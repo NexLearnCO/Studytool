@@ -1,15 +1,42 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, g
 from flask_cors import CORS
 from config import Config
 from services.youtube_service import YouTubeService
 from services.openai_service import OpenAIService
 from services.pdf_service import PDFService
 from services.flashcard_service import FlashcardService
+from api.notes import notes_bp
+from api.events import events_bp
+from utils.sqlite_helpers import ensure_note_columns
 import json
+import os
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS
+cors_origin = os.getenv('APP_CORS_ORIGIN', '*')
+CORS(app, origins=cors_origin)
+
+# Register blueprints
+app.register_blueprint(notes_bp, url_prefix='/api/v1/notes')
+app.register_blueprint(events_bp, url_prefix='/api/v1/events')
+
+# Ensure schema is up to date
+try:
+    ensure_note_columns(Config.DATABASE_URL)
+except Exception as e:
+    print(f"Warning: Could not ensure note columns: {e}")
+
+
+@app.before_request
+def load_user():
+    """Load user context from headers (temp auth)."""
+    g.user = {
+        'id': request.headers.get('X-User-Id', 'demo-user'),
+        'org_id': request.headers.get('X-Org-Id'),
+        'course_id': request.headers.get('X-Course-Id')
+    }
 
 # Initialize services
 youtube_service = YouTubeService()
@@ -27,9 +54,17 @@ def home():
             "/api/text-to-notes",
             "/api/unified-notes",
             "/api/generate-flashcards",
-            "/api/generate-quiz"
+            "/api/generate-quiz",
+            "/api/v1/notes",
+            "/api/v1/events"
         ]
     })
+
+
+@app.route('/healthz')
+def health_check():
+    """Health check endpoint."""
+    return jsonify({'ok': True})
 
 @app.route('/api/youtube-to-notes', methods=['POST'])
 def youtube_to_notes():

@@ -16,14 +16,23 @@ class Note(Base):
     __tablename__ = 'notes'
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    # Multi-tenant & extensible fields
+    org_id = Column(Text, nullable=True)
+    course_id = Column(Text, nullable=True)
+    folder_id = Column(Text, nullable=True)
     title = Column(String(255), nullable=False)
-    content = Column(Text, nullable=False)
+    content = Column(Text, nullable=False)  # Legacy field
+    content_md = Column(Text, nullable=True)
+    content_json = Column(Text, nullable=True)  # Stringified JSON
+    tags = Column(Text, nullable=True)  # Stringified string[]
+    status = Column(Text, default='draft')
     language = Column(String(16), default='zh-tw')
     exam_system = Column(String(64), nullable=True)
     subject = Column(String(64), nullable=True)
     topic = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(Integer, nullable=True)  # epoch ms
+    updated_at = Column(Integer, nullable=True)  # epoch ms
+    deleted_at = Column(Integer, nullable=True)  # epoch ms
 
 
 class Source(Base):
@@ -116,3 +125,15 @@ class KnowledgeEdge(Base):
     target_node_id = Column(Integer, ForeignKey('knowledge_nodes.id'), nullable=False)
     relation = Column(String(64), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Event(Base):
+    __tablename__ = 'events'
+    id = Column(Text, primary_key=True)  # ULID/UUID string
+    user_id = Column(Text, nullable=False)
+    org_id = Column(Text, nullable=True)
+    event = Column(Text, nullable=False)
+    target_type = Column(Text, nullable=True)
+    target_id = Column(Text, nullable=True)
+    ts = Column(Integer, nullable=False)  # epoch ms
+    props = Column(Text, nullable=True)  # JSON string

@@ -1,6 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from models import Base, Note, Source, Flashcard, Quiz, QuizResult, Deck, DeckCard, Review
+from models import Base, Note, Source, Flashcard, Quiz, QuizResult, Deck, DeckCard, Review, Event
 import json
 from datetime import datetime
 from typing import List, Dict, Optional

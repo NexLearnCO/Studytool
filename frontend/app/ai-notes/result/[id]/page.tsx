@@ -144,11 +144,48 @@ export default function AINotesResultPage() {
     document.body.removeChild(element)
   }
 
-  const saveToLibrary = () => {
-    // TODO: Implement save to personal notes library
-    console.log("保存到筆記庫功能待實現")
-    setSuccess(true)
-    setTimeout(() => setSuccess(false), 2000)
+  const saveToLibrary = async () => {
+    if (!resultData) return
+    
+    try {
+      // Import the API functions
+      const { createNote } = await import('@/src/lib/api/notes')
+      const { track } = await import('@/src/lib/track')
+      
+      // Create note in database
+      const response = await createNote({
+        title: resultData.title,
+        content_md: editableNotes,
+        content: editableNotes, // Legacy fallback
+        status: 'active',
+        // Extract tags from config if available
+        tags: resultData.config?.tags || [],
+        exam_system: resultData.config?.examSystem,
+        subject: resultData.config?.subject,
+        topic: resultData.config?.topic
+      })
+      
+      if (response.ok) {
+        // Track the save event
+        await track('NOTE_CREATED', { 
+          source: 'ai', 
+          note_id: response.data.id,
+          word_count: resultData.wordCount,
+          processing_time: resultData.processingTime
+        })
+        
+        setSuccess(true)
+        setTimeout(() => setSuccess(false), 2000)
+        
+        // Optionally redirect to the note editor
+        // router.push(`/notes/${response.data.id}`)
+      } else {
+        throw new Error('Failed to save note')
+      }
+    } catch (error) {
+      console.error('Failed to save to library:', error)
+      alert('保存到筆記庫失敗，請稍後再試')
+    }
   }
 
   if (!resultData) {

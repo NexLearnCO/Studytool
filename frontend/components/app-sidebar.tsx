@@ -74,6 +74,12 @@ const studyTools = [
     isModal: true,
   },
   {
+    title: "我的筆記",
+    url: "/notes",
+    icon: FileText,
+    badge: "NEW",
+  },
+  {
     title: "記憶卡片生成器",
     url: "/flashcards/generator",
     icon: FileText,
