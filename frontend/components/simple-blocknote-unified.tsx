@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useCreateBlockNote } from "@blocknote/react"
 import { BlockNoteView } from "@blocknote/mantine"
 import "@blocknote/mantine/style.css"
@@ -20,15 +20,23 @@ export default function SimpleBlockNoteUnified({
 }: SimpleBlockNoteUnifiedProps) {
   // 創建編輯器實例 - 使用開箱即用的功能
   const editor = useCreateBlockNote()
+  
+  // 追蹤是否已經初始化，避免重複載入
+  const isInitialized = useRef(false)
+  const lastInitialMarkdown = useRef<string>("")
 
-  // 初始化內容 - 簡化版本
+  // 初始化內容 - 只在真正需要時執行一次
   useEffect(() => {
-    if (initialMarkdown && editor) {
+    if (initialMarkdown && editor && !isInitialized.current && initialMarkdown !== lastInitialMarkdown.current) {
       const loadContent = async () => {
         try {
           // 使用官方 API 進行 Markdown 轉換
           const blocks = await editor.tryParseMarkdownToBlocks(initialMarkdown)
           editor.replaceBlocks(editor.document, blocks)
+          
+          // 標記為已初始化
+          isInitialized.current = true
+          lastInitialMarkdown.current = initialMarkdown
         } catch (error) {
           console.error('Failed to parse markdown:', error)
           // 降級處理：插入為純文本段落
@@ -36,6 +44,8 @@ export default function SimpleBlockNoteUnified({
             type: "paragraph",
             content: initialMarkdown
           }])
+          isInitialized.current = true
+          lastInitialMarkdown.current = initialMarkdown
         }
       }
       

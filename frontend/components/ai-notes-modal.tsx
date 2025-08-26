@@ -133,41 +133,42 @@ export function AINotesModal({ children }: AINotesModalProps) {
         })
       }, 300)
 
-      // Make API call to Flask backend
-      const response = await fetch('http://localhost:5000/api/generate-notes', {
+      // Make API call to Flask backend using unified apiFetch
+      const { apiFetch } = await import("@/src/lib/api/client")
+      const result = await apiFetch('/api/generate-notes', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(requestData)
       })
 
       clearInterval(progressInterval)
       setProgress(100)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const result = await response.json()
-
       if (result.success) {
-        // Save to session storage for result page
-        const resultData = {
-          id: Date.now().toString(),
-          title: requestData.title,
-          notes: result.notes,
-          config: requestData,
-          timestamp: new Date().toISOString(),
-          wordCount: result.wordCount || result.notes.length,
-          processingTime: result.processingTime || 'N/A'
+        // Import createNote function for cleaner API usage
+        const { createNote } = await import("@/src/lib/api/notes")
+        
+        // Create draft note directly in backend (no localStorage!)
+        const createResult = await createNote({
+          title: requestData.title || "AI 生成筆記",
+          status: "draft",
+          content_md: result.notes,
+          content: result.notes, // Legacy fallback
+          language: requestData.language,
+          exam_system: requestData.examSystem,
+          subject: requestData.subject,
+          topic: requestData.topic,
+          tags: [] // Could be enhanced with AI-extracted tags
+        })
+        
+        if (!createResult.ok) {
+          throw new Error("創建草稿筆記失敗")
         }
         
-        sessionStorage.setItem('aiNotesResult', JSON.stringify(resultData))
+        const newNoteId = createResult.data.id
         
-        // Close modal and redirect to result page
+        // Close modal and redirect to AI result page (preserve the result flow!)
         setOpen(false)
-        window.location.href = `/ai-notes/result/${resultData.id}`
+        window.location.href = `/ai-notes/result/${newNoteId}`
       } else {
         throw new Error(result.error || '生成筆記失敗')
       }

@@ -33,7 +33,7 @@ def serialize_note(note: Note) -> dict:
     }
 
 
-@notes_bp.route('/', methods=['GET'])
+@notes_bp.route('/notes', methods=['GET'])
 def list_notes():
     """List notes with pagination and filtering."""
     try:
@@ -92,7 +92,7 @@ def list_notes():
         return jsonify({'ok': False, 'message': str(e)}), 500
 
 
-@notes_bp.route('/<int:note_id>', methods=['GET'])
+@notes_bp.route('/notes/<int:note_id>', methods=['GET'])
 def get_note(note_id: int):
     """Get a single note by ID."""
     try:
@@ -119,7 +119,7 @@ def get_note(note_id: int):
         return jsonify({'ok': False, 'message': str(e)}), 500
 
 
-@notes_bp.route('/', methods=['POST'])
+@notes_bp.route('/notes', methods=['POST'])
 def create_note():
     """Create a new note."""
     try:
@@ -172,7 +172,7 @@ def create_note():
         return jsonify({'ok': False, 'message': str(e)}), 500
 
 
-@notes_bp.route('/<int:note_id>', methods=['PATCH'])
+@notes_bp.route('/notes/<int:note_id>', methods=['PATCH'])
 def update_note(note_id: int):
     """Update a note."""
     try:
@@ -221,7 +221,7 @@ def update_note(note_id: int):
         return jsonify({'ok': False, 'message': str(e)}), 500
 
 
-@notes_bp.route('/<int:note_id>', methods=['DELETE'])
+@notes_bp.route('/notes/<int:note_id>', methods=['DELETE'])
 def delete_note(note_id: int):
     """Soft delete a note."""
     try:

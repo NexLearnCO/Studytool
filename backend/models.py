@@ -1,5 +1,5 @@
-from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, JSON, Float, UniqueConstraint
+from sqlalchemy.orm import declarative_base, relationship, backref
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Boolean, JSON, Float, UniqueConstraint, BigInteger
 from datetime import datetime
 
 Base = declarative_base()
@@ -137,3 +137,24 @@ class Event(Base):
     target_id = Column(Text, nullable=True)
     ts = Column(Integer, nullable=False)  # epoch ms
     props = Column(Text, nullable=True)  # JSON string
+
+
+class Artifact(Base):
+    """
+    衍生物模型：存儲從筆記生成的閃卡、測驗等內容
+    kind: 'flashcards' | 'quiz' | 'markmap'
+    data_json: 實際生成的數據 (cards array, quiz questions, etc.)
+    """
+    __tablename__ = 'artifacts'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Text, index=True, nullable=False)  # Match Note's user_id field type
+    note_id = Column(Integer, ForeignKey('notes.id', ondelete='CASCADE'), index=True, nullable=False)
+    kind = Column(String, nullable=False)        # 'flashcards' | 'quiz' | 'markmap'
+    data_json = Column(Text, nullable=False)     # JSON string
+    status = Column(String, default='draft')     # 'draft' | 'active'
+    created_at = Column(BigInteger, nullable=False)  # epoch ms
+    updated_at = Column(BigInteger, nullable=False)  # epoch ms
+
+    # Relationship with Note
+    note = relationship('Note', backref=backref('artifacts', cascade='all, delete-orphan'))

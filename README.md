@@ -1,6 +1,6 @@
 # NexLearn.ai - AI 智慧學習平台
 
-NexLearn.ai 是一個全面的 AI 驅動學習平台，集成了筆記生成、智能複習、分析工具和個人化 AI 導師，為學習者提供完整的數位學習解決方案。
+NexLearn.ai 是一個全面的 AI 驅動學習平台，集成了筆記生成、筆記管理、智能複習工具，為學習者提供完整的數位學習解決方案。
 
 ## ✨ 核心功能
 
@@ -8,44 +8,50 @@ NexLearn.ai 是一個全面的 AI 驅動學習平台，集成了筆記生成、�
 - 🎥 **YouTube 影片轉筆記**: 自動提取影片字幕並生成結構化筆記
 - 📄 **PDF 文件轉筆記**: 解析 PDF 內容並生成摘要筆記  
 - 📝 **文字轉筆記**: 將任何文字內容轉換為組織良好的筆記
+- 🌐 **網頁轉筆記**: 支援多種網路資源內容提取
 - 🧠 **互動式思維導圖**: 使用 Markmap 自動生成可視化思維導圖
 - ✏️ **BlockNote 編輯器**: 類似 Notion 的現代化富文本編輯體驗
 
+### 🗂️ 筆記管理系統 (全新!)
+- 📝 **筆記庫**: 完整的 CRUD 操作，搜尋、篩選、分類
+- 🏷️ **標籤系統**: 靈活的標籤管理和內容組織
+- 🔍 **智能搜尋**: 全文搜尋和語義匹配
+- 💾 **自動保存**: 實時編輯和自動備份
+- 📱 **多租戶支援**: 組織、課程、資料夾層級管理
+
 ### 🎯 智能學習工具
 - 🃏 **AI 記憶卡片**: 從筆記內容自動生成學習卡片，支援編輯和自定義
-- 📊 **智能測驗系統**: 生成多選題測驗，即時反饋和評分
-- 🔄 **間隔重複學習**: 整合 FSRS 算法的科學記憶系統
+- 📊 **智能測驗系統**: 生成多選題測驗，即時反饋和評分，支援字母和文本答案匹配
 - 📈 **學習分析**: 詳細的學習進度和表現分析
-
-### 🤖 AI 導師助手
-- 💬 **個人化 AI 導師**: 24/7 智能問答和學習指導
-- 🎓 **適應性學習**: 根據個人學習風格調整內容
-- 📊 **學習洞察**: 提供學習建議和改進方向
+- 🎯 **事件追蹤**: 用戶行為和學習模式分析
 
 ### 📱 現代化用戶界面
 - 🎨 **美觀的 UI/UX**: 使用 Tailwind CSS 和 Radix UI 組件
 - 📱 **響應式設計**: 完美支援桌面和移動設備
-- 🌙 **深色模式**: 護眼的深色主題支援
-- ⚡ **快速載入**: Next.js 14 提供的極速用戶體驗
+- ⚡ **快速載入**: Next.js 15 提供的極速用戶體驗
+- 🔧 **管理員介面**: 數據瀏覽和系統管理工具
 
 ## 🛠 技術架構
 
 ### 前端 (Next.js 15)
-- **框架**: Next.js 15.2.4 with React 19
+- **框架**: Next.js 15.2.4 with React 19 & App Router
 - **UI 組件**: Radix UI + Tailwind CSS 4.1.9
 - **編輯器**: BlockNote (富文本編輯)
-- **圖表**: Recharts + Markmap (思維導圖)
+- **圖表**: Markmap (思維導圖)
 - **狀態管理**: React Hooks + Context API
+- **構建工具**: TypeScript 5.x
 - **部署**: Vercel Ready
 
 ### 後端 (Flask + Python)
-- **框架**: Flask 2.3.2
+- **框架**: Flask 3.x with Blueprints
+- **ORM**: SQLAlchemy 2.x
+- **數據庫**: SQLite (開發) / PostgreSQL (生產)
 - **AI 服務**: OpenAI GPT Models
 - **數據處理**: 
   - YouTube: youtube-transcript-api + yt-dlp
   - PDF: PyPDF2
-  - 音頻: Pydub
-- **數據庫**: SQLAlchemy (支援多種數據庫)
+  - 音頻: Whisper API
+- **API 設計**: RESTful APIs with CORS support
 
 ## 🚀 快速開始
 
@@ -84,23 +90,31 @@ yarn install
 
 #### 4. 啟動應用
 
-**後端服務:**
+**方法一：同時啟動前後端 (推薦)**
+```bash
+# 在項目根目錄
+npm run dev
+```
+
+**方法二：分別啟動**
+
+後端服務:
 ```bash
 cd backend
 python app.py
 ```
 
-**前端應用:**
+前端應用:
 ```bash
 cd frontend
 npm run dev
-# 或
-yarn dev
 ```
 
 #### 5. 訪問應用
-- 前端: http://localhost:3000
-- 後端 API: http://localhost:5000
+- **前端**: http://localhost:3000
+- **後端 API**: http://localhost:5000
+- **管理員介面**: http://localhost:3000/admin/data
+- **筆記管理**: http://localhost:3000/notes
 
 ## 📖 使用指南
 
@@ -134,33 +148,45 @@ yarn dev
 
 ### 筆記生成 API
 ```
-POST /api/generate-notes
-POST /api/youtube-to-notes  
-POST /api/pdf-to-notes
-POST /api/text-to-notes
+POST /api/generate-notes          # 統一筆記生成 (支援多種來源)
+POST /api/youtube-to-notes        # YouTube 轉筆記
+POST /api/pdf-to-notes           # PDF 轉筆記
+POST /api/text-to-notes          # 文字轉筆記
+```
+
+### 筆記管理 API (新!)
+```
+GET    /api/v1/notes             # 獲取筆記列表
+POST   /api/v1/notes             # 創建新筆記
+GET    /api/v1/notes/{id}        # 獲取單個筆記
+PATCH  /api/v1/notes/{id}        # 更新筆記
+DELETE /api/v1/notes/{id}        # 刪除筆記 (軟刪除)
 ```
 
 ### 學習工具 API
 ```
-POST /api/generate-flashcards-from-notes
-POST /api/generate-quiz-from-notes
-POST /api/ai-tutor-chat
+POST /api/generate-flashcards-from-notes  # 從筆記生成閃卡
+POST /api/generate-quiz-from-notes        # 從筆記生成測驗
 ```
 
-### 用戶數據 API
+### 事件追蹤 API (新!)
 ```
-GET /api/user-progress
-POST /api/save-study-session
-GET /api/analytics-data
+POST /api/v1/events              # 記錄用戶事件
+GET  /api/v1/events              # 獲取事件列表 (管理員)
 ```
+
+詳細 API 文檔請參考 [API_REFERENCE.md](./docs/API_REFERENCE.md)
 
 ## 🎯 主要頁面
 
 | 頁面 | 路由 | 功能 |
 |------|------|------|
 | 儀表板 | `/` | 學習概覽、統計數據、快速操作 |
-| AI 筆記 | `/ai-notes` | 筆記生成工具 |
+| AI 筆記生成 | `/ai-notes` | 筆記生成工具 |
 | 筆記結果 | `/ai-notes/result/[id]` | 筆記編輯、思維導圖、卡片、測驗 |
+| **筆記管理** | `/notes` | **筆記列表、搜尋、篩選** |
+| **筆記編輯** | `/notes/[id]` | **單個筆記編輯、Markmap 預覽** |
+| **管理員介面** | `/admin/data` | **數據瀏覽、筆記和事件管理** |
 | AI 導師 | `/ai-tutor` | 智能問答助手 |
 | 學習分析 | `/analytics` | 詳細學習數據分析 |
 | 練習工具 | `/practice` | 各種練習模式 |
@@ -188,11 +214,15 @@ GOOGLE_GEMINI_API_KEY=your_gemini_key_here
 ### 前端配置 (.env.local)
 ```bash
 # API 端點
-NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_API_BASE=http://localhost:5000
+NEXT_PUBLIC_APP_ORIGIN=http://localhost:3000
 
-# 功能開關
-NEXT_PUBLIC_ENABLE_ANALYTICS=true
-NEXT_PUBLIC_ENABLE_AI_TUTOR=true
+# 多租戶配置 (可選)
+NEXT_PUBLIC_ORG_ID=demo-org
+NEXT_PUBLIC_COURSE_ID=demo-course
+
+# OpenAI 配置 (客戶端使用，如需要)
+# NEXT_PUBLIC_OPENAI_API_KEY=your_openai_api_key_here
 ```
 
 ## 🚀 部署指南
@@ -215,9 +245,11 @@ docker run -p 3000:3000 -p 5000:5000 nexlearn-app
 ## 🛣 發展路線圖
 
 ### 近期計劃 (Q1 2025)
-- [ ] 🗄️ **用戶數據持久化**: Supabase/PostgreSQL 整合
+- [x] 🗄️ **數據持久化**: SQLite/PostgreSQL 整合 ✅
+- [x] 📚 **筆記管理系統**: 筆記庫、標籤、搜尋、CRUD ✅
+- [x] 🎯 **事件追蹤系統**: 用戶行為分析基礎 ✅
+- [x] 🔧 **管理員介面**: 數據瀏覽和管理工具 ✅
 - [ ] 👥 **用戶認證系統**: 登入、註冊、個人檔案
-- [ ] 📚 **筆記管理系統**: 筆記庫、標籤、搜尋
 - [ ] 🔄 **同步功能**: 跨設備數據同步
 
 ### 中期計劃 (Q2-Q3 2025)

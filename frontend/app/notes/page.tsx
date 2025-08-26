@@ -84,9 +84,18 @@ export default function NotesPage() {
     (note.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
-  // Format timestamp
+  // Format timestamp with relative time
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleDateString('zh-TW', {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diff = now.getTime() - date.getTime()
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+    
+    if (days === 0) return '今天'
+    if (days === 1) return '昨天'
+    if (days < 7) return `${days} 天前`
+    
+    return date.toLocaleDateString('zh-TW', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -150,11 +159,11 @@ export default function NotesPage() {
         ) : (
           <div className="grid gap-4">
             {filteredNotes.map((note) => (
-              <Card key={note.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-3">
+              <Card key={note.id} className="group hover:shadow-lg hover:shadow-blue-100 transition-all duration-200 border-l-4 border-l-transparent hover:border-l-blue-500 cursor-pointer">
+                <CardHeader className="pb-3" onClick={() => router.push(`/notes/${note.id}`)}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <CardTitle className="text-lg font-medium text-slate-900 mb-1">
+                      <CardTitle className="text-lg font-semibold text-slate-900 mb-2 group-hover:text-blue-700 transition-colors">
                         {note.title}
                       </CardTitle>
                       <div className="flex items-center gap-4 text-sm text-slate-500">
@@ -162,10 +171,29 @@ export default function NotesPage() {
                           <Calendar className="h-3 w-3" />
                           {formatDate(note.updated_at)}
                         </div>
-                        <Badge variant="outline" className="text-xs">
-                          {note.status}
+                        <Badge 
+                          variant={note.status === 'draft' ? 'secondary' : note.status === 'active' ? 'default' : 'outline'} 
+                          className="text-xs font-medium"
+                        >
+                          {note.status === 'draft' ? '草稿' : note.status === 'active' ? '已發布' : note.status}
                         </Badge>
+                        {note.exam_system && (
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                            {note.exam_system}
+                          </Badge>
+                        )}
+                        {note.subject && (
+                          <Badge variant="outline" className="text-xs bg-green-50 text-green-700">
+                            {note.subject}
+                          </Badge>
+                        )}
                       </div>
+                      {/* Preview snippet */}
+                      {note.content_md && (
+                        <p className="text-sm text-slate-600 mt-2 line-clamp-2">
+                          {note.content_md.slice(0, 120).replace(/[#*`]/g, '')}...
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-2">
                       <Button

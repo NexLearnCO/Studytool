@@ -5,92 +5,159 @@
 ### 步驟 1: 環境準備
 
 #### 必要軟體:
+- **Node.js 18+** - [下載連結](https://nodejs.org/)
 - **Python 3.8+** - [下載連結](https://www.python.org/downloads/)
 - **現代瀏覽器** - Chrome, Firefox, Safari, Edge
-- **文字編輯器** - VS Code, Sublime Text, 或任何編輯器
+- **代碼編輯器** - VS Code (推薦), WebStorm, 或其他
 
-#### 檢查Python版本:
+#### 檢查版本:
 ```powershell
-python --version
+node --version    # 應該 >= 18.0.0
+python --version  # 應該 >= 3.8.0
+npm --version     # 應該 >= 8.0.0
 ```
 
 ### 步驟 2: 安裝依賴
 
-#### 安裝Python套件:
+#### 安裝後端 Python 依賴:
 ```powershell
 cd backend
 pip install -r requirements.txt
 ```
 
-#### 如果遇到安裝問題:
+#### 安裝前端 Node.js 依賴:
 ```powershell
-# 升級pip
-python -m pip install --upgrade pip
-
-# 使用國內鏡像 (中國用戶)
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
+cd frontend
+npm install
+# 或使用 yarn
+yarn install
 ```
 
-### 步驟 3: 配置OpenAI API
+#### 如果遇到安裝問題:
+```powershell
+# Python 依賴問題
+python -m pip install --upgrade pip
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
 
-#### 獲取API密鑰:
-1. 訪問 [OpenAI官網](https://platform.openai.com/)
-2. 註冊/登入帳戶
-3. 前往 API Keys 頁面
-4. 創建新的API密鑰
-5. 複製密鑰 (只顯示一次!)
+# Node.js 依賴問題
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+```
 
-#### 創建環境變數文件:
-在 `backend` 目錄下創建 `.env` 文件:
+### 步驟 3: 配置環境變數
 
-```bash
-# 在backend目錄下
+#### 後端配置 (.env):
+在 `backend` 目錄創建 `.env` 文件:
+
+```powershell
+cd backend
 New-Item -Name ".env" -ItemType File
 ```
 
 在 `.env` 文件中添加:
-```
+```bash
 OPENAI_API_KEY=sk-your-actual-api-key-here
 FLASK_PORT=5000
 FLASK_DEBUG=True
+
+# 可選配置
+OPENAI_MODEL=gpt-3.5-turbo
+OPENAI_MAX_TOKENS=4096
+OPENAI_TEMPERATURE=0.7
 ```
 
+#### 前端配置 (.env.local):
+在 `frontend` 目錄創建 `.env.local` 文件:
+
+```powershell
+cd frontend
+Copy-Item env-example.txt .env.local
+```
+
+編輯 `.env.local` 文件:
+```bash
+# API 端點
+NEXT_PUBLIC_API_BASE=http://localhost:5000
+NEXT_PUBLIC_APP_ORIGIN=http://localhost:3000
+
+# 多租戶配置 (可選)
+NEXT_PUBLIC_ORG_ID=demo-org
+NEXT_PUBLIC_COURSE_ID=demo-course
+```
+
+#### 獲取 OpenAI API 密鑰:
+1. 訪問 [OpenAI官網](https://platform.openai.com/)
+2. 註冊/登入帳戶
+3. 前往 API Keys 頁面
+4. 創建新的API密鑰
+5. 複製密鑰並替換上面的 `sk-your-actual-api-key-here`
+
 ⚠️ **重要**: 
-- 將 `sk-your-actual-api-key-here` 替換為你的真實API密鑰
 - 不要將 `.env` 文件提交到Git倉庫
+- API 密鑰請妥善保管
 
-### 步驟 4: 測試設置
+### 步驟 4: 啟動應用
 
-#### 啟動後端服務:
+#### 方法一：統一啟動 (推薦)
+```powershell
+# 在項目根目錄
+npm run dev
+```
+這會同時啟動前端和後端服務。
+
+#### 方法二：分別啟動
+**啟動後端:**
 ```powershell
 cd backend
 python app.py
 ```
 
-你應該看到類似輸出:
-```
- * Running on all addresses (0.0.0.0)
- * Running on http://127.0.0.1:5000
- * Running on http://[::1]:5000
-```
-
-#### 測試API:
-打開瀏覽器，訪問: http://localhost:5000
-
-你應該看到JSON響應:
-```json
-{
-  "message": "NexLearn AI Notes API",
-  "endpoints": [...]
-}
+**啟動前端:**
+```powershell
+cd frontend
+npm run dev
 ```
 
-#### 打開前端:
-在文件管理器中，雙擊 `frontend/index.html` 文件
+### 步驟 5: 驗證安裝
+
+#### 檢查後端服務:
+1. 訪問: http://localhost:5000
+2. 你應該看到 API 信息響應
+3. 測試健康檢查: http://localhost:5000/healthz
+
+#### 檢查前端應用:
+1. 訪問: http://localhost:3000
+2. 你應該看到 NexLearn.ai 主頁
+3. 側邊欄應該正常顯示
+
+#### 測試核心功能:
+1. **筆記管理**: 訪問 http://localhost:3000/notes
+2. **AI 筆記生成**: 點擊「AI 筆記」
+3. **管理員介面**: 訪問 http://localhost:3000/admin/data
+
+如果所有頁面都能正常載入，恭喜！系統安裝成功！🎉
 
 ## 🔧 常見問題排解
 
-### 問題 1: 模組未找到錯誤
+### 問題 1: TypeError: Failed to fetch
+
+**錯誤信息:**
+```
+TypeError: Failed to fetch
+```
+
+**可能原因:**
+- 後端未啟動或端口不對
+- 前端環境變數未設置
+- CORS 被瀏覽器阻擋
+
+**解決方案:**
+1. 確認後端運行：`curl http://localhost:5000/healthz`
+2. 檢查 `frontend/.env.local` 中的 `NEXT_PUBLIC_API_BASE`
+3. 重啟前端開發服務器：`npm run dev`
+
+### 問題 2: 模組未找到錯誤
 
 **錯誤信息:**
 ```
@@ -104,7 +171,21 @@ pip install flask
 pip install -r requirements.txt
 ```
 
-### 問題 2: OpenAI API錯誤
+### 問題 3: Next.js 編譯錯誤
+
+**錯誤信息:**
+```
+Module not found: Can't resolve 'markmap-common'
+```
+
+**解決方案:**
+```powershell
+cd frontend
+npm install markmap-common markmap-lib markmap-view
+npm run dev
+```
+
+### 問題 4: OpenAI API 錯誤
 
 **錯誤信息:**
 ```
@@ -112,21 +193,25 @@ Error: The api_key client option must be set
 ```
 
 **解決方案:**
-1. 檢查 `.env` 文件是否存在於 `backend` 目錄
+1. 檢查 `backend/.env` 文件是否存在
 2. 確認API密鑰格式正確 (以 `sk-` 開頭)
 3. 重啟後端服務
 
-### 問題 3: CORS錯誤
+### 問題 5: 數據庫錯誤
 
 **錯誤信息:**
 ```
-Access to fetch at 'http://localhost:5000' has been blocked by CORS policy
+no such table: notes
 ```
 
 **解決方案:**
-1. 確認後端服務正在運行
-2. 檢查 `flask-cors` 是否已安裝
-3. 在瀏覽器中直接訪問後端URL確認可達性
+數據庫會自動初始化，如果遇到問題：
+```powershell
+cd backend
+# 刪除數據庫文件重新創建
+rm nexlearn.db
+python app.py
+```
 
 ### 問題 4: YouTube字幕無法獲取
 

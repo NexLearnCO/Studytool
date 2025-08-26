@@ -25,7 +25,7 @@ def serialize_event(event: Event) -> dict:
     }
 
 
-@events_bp.route('/', methods=['POST'])
+@events_bp.route('/events', methods=['POST'])
 def create_event():
     """Create a new event."""
     try:
@@ -71,7 +71,7 @@ def create_event():
         return jsonify({'ok': False, 'message': str(e)}), 500
 
 
-@events_bp.route('/', methods=['GET'])
+@events_bp.route('/events', methods=['GET'])
 def list_events():
     """List events for admin explorer."""
     try:

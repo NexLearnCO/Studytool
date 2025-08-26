@@ -7,6 +7,7 @@ from services.pdf_service import PDFService
 from services.flashcard_service import FlashcardService
 from api.notes import notes_bp
 from api.events import events_bp
+from api.artifacts import artifacts_bp
 from utils.sqlite_helpers import ensure_note_columns
 import json
 import os
@@ -14,19 +15,26 @@ import os
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure CORS
+# Configure CORS with custom headers
 cors_origin = os.getenv('APP_CORS_ORIGIN', '*')
-CORS(app, origins=cors_origin)
+CORS(app,
+     origins=cors_origin,
+     allow_headers=['Content-Type', 'X-User-Id', 'X-Org-Id', 'X-Course-Id', 'X-Role'],
+     methods=['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'])
 
-# Register blueprints
-app.register_blueprint(notes_bp, url_prefix='/api/v1/notes')
-app.register_blueprint(events_bp, url_prefix='/api/v1/events')
+# Register blueprints  
+app.register_blueprint(notes_bp, url_prefix='/api/v1')
+app.register_blueprint(events_bp, url_prefix='/api/v1')
+app.register_blueprint(artifacts_bp)
 
 # Ensure schema is up to date
 try:
     ensure_note_columns(Config.DATABASE_URL)
+    
+    # Initialize artifacts table (SQLAlchemy will auto-create)
+    print("✅ Schema updated (artifacts table will be auto-created by SQLAlchemy)")
 except Exception as e:
-    print(f"Warning: Could not ensure note columns: {e}")
+    print(f"Warning: Could not ensure schema: {e}")
 
 
 @app.before_request
@@ -161,14 +169,32 @@ def text_to_notes():
 
 @app.route('/api/generate-quiz', methods=['POST'])
 def generate_quiz():
-    """Generate quiz from notes"""
+    """Generate quiz from notes or note_id"""
     try:
-        data = request.json
+        data = request.json or {}
         notes = data.get('notes')
+        note_id = data.get('note_id')
         language = data.get('language', 'zh-tw')
         
+        # Support note_id parameter for AI Studio
+        if note_id and not notes:
+            try:
+                from utils.sqlite_helpers import get_db_connection
+                with get_db_connection() as db:
+                    cursor = db.execute(
+                        "SELECT content_md, content FROM notes WHERE id = ? AND user_id = ?",
+                        (note_id, g.user['id'])
+                    )
+                    row = cursor.fetchone()
+                    if not row:
+                        return jsonify({"ok": False, "error": "筆記不存在或無權訪問"}), 404
+                    
+                    notes = row[0] or row[1] or ''
+            except Exception as e:
+                return jsonify({"ok": False, "error": f"獲取筆記失敗: {str(e)}"}), 500
+        
         if not notes:
-            return jsonify({"error": "Notes are required"}), 400
+            return jsonify({"ok": False, "error": "Notes are required"}), 400
         
         quiz_json = openai_service.generate_quiz(notes, language)
         
@@ -193,12 +219,16 @@ def generate_quiz():
                 ]
         
         return jsonify({
-            "success": True,
+            "ok": True,
+            "data": {
+                "questions": quiz
+            },
+            "success": True,  # Keep for backward compatibility
             "quiz": quiz
         })
         
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/generate-flashcards', methods=['POST'])
 def generate_flashcards_enhanced():

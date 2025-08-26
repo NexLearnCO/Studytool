@@ -2,419 +2,510 @@
 
 import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { SidebarTrigger } from "@/components/ui/sidebar"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import MarkmapViewer from "@/components/markmap-viewer"
-import AINotesViewer from "@/components/ai-notes-viewer"
-import FlashcardGenerationTab from "@/components/flashcard-generation-tab"
-import QuizGenerationTab from "@/components/quiz-generation-tab"
-import {
+import { Separator } from "@/components/ui/separator"
+import { 
   Brain,
   FileText,
-  Sparkles,
-  CheckCircle,
-  Share,
+  Zap,
+  BookOpen,
+  Eye,
+  Save,
   Download,
   Copy,
-  Edit,
-  Save,
   ArrowLeft,
-  BookOpen,
-  Clock,
-  FileCode,
-  Languages,
-  TrendingUp
+  Loader2,
+  CheckCircle,
+  AlertCircle,
+  Sparkles
 } from "lucide-react"
+import { getNote, type Note } from "@/src/lib/api/notes"
+import { 
+  createArtifact, 
+  listArtifacts, 
+  generateFlashcardsFromNote,
+  generateQuizFromNote,
+  type Artifact 
+} from "@/src/lib/api/artifacts"
+import { track } from "@/src/lib/track"
+import MarkmapViewer from "@/components/markmap-viewer"
 
-interface ResultData {
-  id: string
-  title: string
-  notes: string
-  config: any
-  timestamp: string
-  wordCount: number
-  processingTime: string
-}
-
-export default function AINotesResultPage() {
-  const params = useParams()
+export default function AIResultPage() {
+  const { id } = useParams<{ id: string }>()
   const router = useRouter()
-  const [resultData, setResultData] = useState<ResultData | null>(null)
-  const [editableNotes, setEditableNotes] = useState("")
-  const [isEditing, setIsEditing] = useState(false)
-  const [activeTab, setActiveTab] = useState("notes")
-  const [success, setSuccess] = useState(false)
   
-  // 閃卡狀態管理
-  const [flashcardData, setFlashcardData] = useState<any>(null)
+  const [note, setNote] = useState<Note | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
   
-  // Quiz 狀態管理
-  const [quizData, setQuizData] = useState<any>(null)
+  // Generated content states
+  const [flashcards, setFlashcards] = useState<any[] | null>(null)
+  const [quiz, setQuiz] = useState<any | null>(null)
+  const [savedArtifacts, setSavedArtifacts] = useState<Artifact[]>([])
+  
+  // Loading states
+  const [generatingCards, setGeneratingCards] = useState(false)
+  const [generatingQuiz, setGeneratingQuiz] = useState(false)
+  const [savingCards, setSavingCards] = useState(false)
+  const [savingQuiz, setSavingQuiz] = useState(false)
 
+  // Load note and existing artifacts
   useEffect(() => {
-    // Load result data from session storage
-    const stored = sessionStorage.getItem('aiNotesResult')
-    if (stored) {
-      const data = JSON.parse(stored)
-      setResultData(data)
-      setEditableNotes(data.notes)
-    } else {
-      // Redirect back if no data
-      router.push('/')
+    if (!id) return
+    
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        setError("")
+        
+        // Load note
+        const noteResponse = await getNote(id)
+        if (!noteResponse.ok) {
+          throw new Error("筆記不存在或已被刪除")
+        }
+        
+        setNote(noteResponse.data)
+        
+        // Load existing artifacts
+        const artifactsResponse = await listArtifacts(id)
+        if (artifactsResponse.ok) {
+          setSavedArtifacts(artifactsResponse.data)
+        }
+        
+        await track('AI_RESULT_PAGE_VIEWED', { note_id: id })
+        
+      } catch (err) {
+        console.error('Failed to load AI result data:', err)
+        setError(err instanceof Error ? err.message : "載入失敗")
+      } finally {
+        setLoading(false)
+      }
     }
     
-    // Load flashcard data from localStorage
-    const flashcardKey = `flashcards_${params.id}`
-    const storedFlashcards = localStorage.getItem(flashcardKey)
-    if (storedFlashcards) {
-      try {
-        const flashcardData = JSON.parse(storedFlashcards)
-        setFlashcardData(flashcardData)
-      } catch (error) {
-        console.error('Failed to parse flashcard data:', error)
-      }
-    }
+    loadData()
+  }, [id])
 
-    // Load quiz data from localStorage
-    const quizKey = `quiz_${params.id}`
-    const storedQuiz = localStorage.getItem(quizKey)
-    if (storedQuiz) {
-      try {
-        const quizData = JSON.parse(storedQuiz)
-        setQuizData(quizData)
-      } catch (error) {
-        console.error('Failed to parse quiz data:', error)
-      }
-    }
-  }, [router, params.id])
-
-  const handleSaveEdit = () => {
-    if (resultData) {
-      const updatedData = {
-        ...resultData,
-        notes: editableNotes,
-        lastEdited: new Date().toISOString()
-      }
-      setResultData(updatedData)
-      sessionStorage.setItem('aiNotesResult', JSON.stringify(updatedData))
-      setIsEditing(false)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 2000)
-    }
-  }
-
-  // 保存閃卡數據到 localStorage
-  const handleFlashcardDataChange = (data: any) => {
-    setFlashcardData(data)
-    const flashcardKey = `flashcards_${params.id}`
-    localStorage.setItem(flashcardKey, JSON.stringify(data))
-  }
-
-  // 保存 Quiz 數據到 localStorage
-  const handleQuizDataChange = (data: any) => {
-    setQuizData(data)
-    const quizKey = `quiz_${params.id}`
-    localStorage.setItem(quizKey, JSON.stringify(data))
-  }
-
-  const copyNotes = async () => {
-    try {
-      await navigator.clipboard.writeText(editableNotes)
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 2000)
-    } catch (err) {
-      console.error("複製失敗")
-    }
-  }
-
-  const downloadNotes = () => {
-    if (!resultData) return
-    
-    const element = document.createElement("a")
-    const file = new Blob([editableNotes], { type: 'text/plain' })
-    element.href = URL.createObjectURL(file)
-    element.download = `${resultData.title}.md`
-    document.body.appendChild(element)
-    element.click()
-    document.body.removeChild(element)
-  }
-
-  const saveToLibrary = async () => {
-    if (!resultData) return
+  // Generate flashcards
+  const handleGenerateFlashcards = async () => {
+    if (!note) return
     
     try {
-      // Import the API functions
-      const { createNote } = await import('@/src/lib/api/notes')
-      const { track } = await import('@/src/lib/track')
+      setGeneratingCards(true)
+      setError("")
       
-      // Create note in database
-      const response = await createNote({
-        title: resultData.title,
-        content_md: editableNotes,
-        content: editableNotes, // Legacy fallback
-        status: 'active',
-        // Extract tags from config if available
-        tags: resultData.config?.tags || [],
-        exam_system: resultData.config?.examSystem,
-        subject: resultData.config?.subject,
-        topic: resultData.config?.topic
+      const response = await generateFlashcardsFromNote(id)
+      if (!response.ok) {
+        throw new Error("生成閃卡失敗")
+      }
+      
+      setFlashcards(response.data.cards || [])
+      await track('FLASHCARDS_GENERATED', { note_id: id, count: response.data.cards?.length || 0 })
+      
+    } catch (err) {
+      console.error('Failed to generate flashcards:', err)
+      setError(err instanceof Error ? err.message : "生成閃卡失敗")
+    } finally {
+      setGeneratingCards(false)
+    }
+  }
+
+  // Save flashcards as artifact
+  const handleSaveFlashcards = async () => {
+    if (!flashcards || flashcards.length === 0) return
+    
+    try {
+      setSavingCards(true)
+      setError("")
+      
+      await createArtifact(id, {
+        kind: 'flashcards',
+        data_json: { cards: flashcards },
+        status: 'active'
       })
       
-      if (response.ok) {
-        // Track the save event
-        await track('NOTE_CREATED', { 
-          source: 'ai', 
-          note_id: response.data.id,
-          word_count: resultData.wordCount,
-          processing_time: resultData.processingTime
-        })
-        
-        setSuccess(true)
-        setTimeout(() => setSuccess(false), 2000)
-        
-        // Optionally redirect to the note editor
-        // router.push(`/notes/${response.data.id}`)
-      } else {
-        throw new Error('Failed to save note')
+      // Reload artifacts
+      const artifactsResponse = await listArtifacts(id)
+      if (artifactsResponse.ok) {
+        setSavedArtifacts(artifactsResponse.data)
       }
-    } catch (error) {
-      console.error('Failed to save to library:', error)
-      alert('保存到筆記庫失敗，請稍後再試')
+      
+      await track('FLASHCARDS_SAVED', { note_id: id, count: flashcards.length })
+      
+    } catch (err) {
+      console.error('Failed to save flashcards:', err)
+      setError(err instanceof Error ? err.message : "保存閃卡失敗")
+    } finally {
+      setSavingCards(false)
     }
   }
 
-  if (!resultData) {
+  // Generate quiz
+  const handleGenerateQuiz = async () => {
+    if (!note) return
+    
+    try {
+      setGeneratingQuiz(true)
+      setError("")
+      
+      const response = await generateQuizFromNote(id)
+      if (!response.ok) {
+        throw new Error("生成測驗失敗")
+      }
+      
+      setQuiz(response.data)
+      await track('QUIZ_GENERATED', { note_id: id, count: response.data.questions?.length || 0 })
+      
+    } catch (err) {
+      console.error('Failed to generate quiz:', err)
+      setError(err instanceof Error ? err.message : "生成測驗失敗")
+    } finally {
+      setGeneratingQuiz(false)
+    }
+  }
+
+  // Save quiz as artifact
+  const handleSaveQuiz = async () => {
+    if (!quiz) return
+    
+    try {
+      setSavingQuiz(true)
+      setError("")
+      
+      await createArtifact(id, {
+        kind: 'quiz',
+        data_json: quiz,
+        status: 'active'
+      })
+      
+      // Reload artifacts
+      const artifactsResponse = await listArtifacts(id)
+      if (artifactsResponse.ok) {
+        setSavedArtifacts(artifactsResponse.data)
+      }
+      
+      await track('QUIZ_SAVED', { note_id: id, count: quiz.questions?.length || 0 })
+      
+    } catch (err) {
+      console.error('Failed to save quiz:', err)
+      setError(err instanceof Error ? err.message : "保存測驗失敗")
+    } finally {
+      setSavingQuiz(false)
+    }
+  }
+
+  // Copy content to clipboard
+  const handleCopyContent = async () => {
+    if (!note?.content_md) return
+    
+    try {
+      await navigator.clipboard.writeText(note.content_md)
+      await track('CONTENT_COPIED', { note_id: id })
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  // Download as markdown
+  const handleDownloadMarkdown = () => {
+    if (!note?.content_md) return
+    
+    const blob = new Blob([note.content_md], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${note.title || 'AI筆記'}.md`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+    
+    track('CONTENT_DOWNLOADED', { note_id: id, format: 'markdown' })
+  }
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">載入中...</p>
+      <div className="flex flex-col min-h-screen">
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>載入 AI 結果中...</span>
+          </div>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/')}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                返回
-              </Button>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">{resultData.title}</h1>
-                <p className="text-sm text-gray-500">
-                  生成於 {new Date(resultData.timestamp).toLocaleString('zh-TW')}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={copyNotes}>
-                <Copy className="h-4 w-4 mr-1" />
-                複製
-              </Button>
-              <Button variant="outline" size="sm" onClick={downloadNotes}>
-                <Download className="h-4 w-4 mr-1" />
-                下載
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => {}}>
-                <Share className="h-4 w-4 mr-1" />
-                分享
-              </Button>
-              <Button onClick={saveToLibrary} className="bg-blue-600 hover:bg-blue-700">
-                <BookOpen className="h-4 w-4 mr-1" />
-                收入筆記庫
-              </Button>
-            </div>
-          </div>
+  if (error && !note) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <div className="flex-1 flex items-center justify-center">
+          <Alert className="max-w-md">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         </div>
       </div>
+    )
+  }
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Left Sidebar - Metadata */}
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">筆記資訊</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <div className="text-sm font-medium">處理時間</div>
-                    <div className="text-xs text-gray-500">{resultData.processingTime}</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <FileCode className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <div className="text-sm font-medium">字數統計</div>
-                    <div className="text-xs text-gray-500">{resultData.wordCount.toLocaleString()} 字</div>
-                  </div>
-                </div>
+  const markdown = note?.content_md || note?.content || ""
+  const hasFlashcardsArtifact = savedArtifacts.some(a => a.kind === 'flashcards')
+  const hasQuizArtifact = savedArtifacts.some(a => a.kind === 'quiz')
 
-                <div className="flex items-center gap-2">
-                  <Languages className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <div className="text-sm font-medium">語言</div>
-                    <div className="text-xs text-gray-500">{resultData.config.language || '繁體中文'}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <div className="text-sm font-medium">詳細程度</div>
-                    <div className="text-xs text-gray-500">{resultData.config.detailLevel || '適中'}</div>
-                  </div>
-                </div>
-
-                {resultData.config.examSystem && (
-                  <div>
-                    <div className="text-sm font-medium">考試系統</div>
-                    <Badge variant="outline" className="mt-1">
-                      {resultData.config.examSystem}
-                    </Badge>
-                  </div>
-                )}
-
-                {resultData.config.subject && (
-                  <div>
-                    <div className="text-sm font-medium">科目</div>
-                    <Badge variant="outline" className="mt-1">
-                      {resultData.config.subject}
-                    </Badge>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+  return (
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={() => router.push('/notes')}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              我的筆記
+            </Button>
+            <div>
+              <h1 className="text-xl font-semibold text-slate-900 flex items-center gap-2">
+                <Brain className="h-5 w-5 text-blue-600" />
+                {note?.title || "AI 生成結果"}
+                <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  AI Studio
+                </Badge>
+              </h1>
+            </div>
           </div>
-
-          {/* Main Content */}
-          <div className="lg:col-span-3">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Brain className="h-5 w-5 text-blue-600" />
-                      AI 生成內容
-                    </CardTitle>
-                    <CardDescription>
-                      您可以編輯內容後保存到筆記庫
-                    </CardDescription>
-                  </div>
-{/* 編輯功能已整合到 AINotesViewer 中 */}
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                  <TabsList className="grid w-full grid-cols-4 rounded-none border-b">
-                    <TabsTrigger value="notes" className="text-sm">
-                      <FileText className="h-4 w-4 mr-1" />
-                      筆記
-                    </TabsTrigger>
-                    <TabsTrigger value="mindmap" className="text-sm">
-                      <Brain className="h-4 w-4 mr-1" />
-                      思維導圖
-                    </TabsTrigger>
-                    <TabsTrigger value="flashcards" className="text-sm">
-                      <Sparkles className="h-4 w-4 mr-1" />
-                      記憶卡片
-                    </TabsTrigger>
-                    <TabsTrigger value="quiz" className="text-sm">
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      測驗
-                    </TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="notes" className="p-0 m-0">
-                    <AINotesViewer
-                      aiNotes={editableNotes}
-                      onNotesChange={(newNotes) => {
-                        setEditableNotes(newNotes)
-                        if (resultData) {
-                          const updatedData = {
-                            ...resultData,
-                            notes: newNotes,
-                            lastEdited: new Date().toISOString()
-                          }
-                          setResultData(updatedData)
-                          sessionStorage.setItem('aiNotesResult', JSON.stringify(updatedData))
-                        }
-                      }}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="mindmap" className="p-6 m-0">
-                    <div className="bg-white rounded-lg border">
-                      <div className="p-4 border-b">
-                        <h3 className="font-medium text-lg flex items-center gap-2">
-                          <Brain className="h-5 w-5 text-blue-600" />
-                          智能思維導圖
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-1">
-                          基於您的筆記內容自動生成的可交互思維導圖
-                        </p>
-                      </div>
-                      <div className="p-0">
-                        <MarkmapViewer 
-                          markdown={editableNotes} 
-                          className="min-h-[700px]"
-                        />
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="flashcards" className="p-6 m-0">
-                    <FlashcardGenerationTab 
-                      noteContent={editableNotes}
-                      noteTitle={resultData.title}
-                      savedData={flashcardData}
-                      onDataChange={handleFlashcardDataChange}
-                    />
-                  </TabsContent>
-
-                  <TabsContent value="quiz" className="p-6 m-0">
-                    <QuizGenerationTab 
-                      noteContent={editableNotes}
-                      noteTitle={resultData.title}
-                      savedData={quizData}
-                      onDataChange={handleQuizDataChange}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-
-            {/* Success Message */}
-            {success && (
-              <Alert className="mt-4 border-green-200 bg-green-50">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-700">
-                  操作成功完成！
-                </AlertDescription>
-              </Alert>
-            )}
+          
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleCopyContent}>
+              <Copy className="mr-2 h-4 w-4" />
+              複製
+            </Button>
+            <Button variant="outline" onClick={handleDownloadMarkdown}>
+              <Download className="mr-2 h-4 w-4" />
+              下載
+            </Button>
+            <Button onClick={() => router.push(`/notes/${id}`)}>
+              <Eye className="mr-2 h-4 w-4" />
+              編輯筆記
+            </Button>
           </div>
         </div>
+      </header>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="px-6 pt-4">
+          <Alert className="border-red-200 bg-red-50">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">{error}</AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <div className="flex-1 p-6 space-y-6">
+        {/* Mindmap Section */}
+        <Card className="shadow-sm">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-purple-600" />
+              思維導圖
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[400px] border rounded-lg bg-white">
+              <MarkmapViewer markdown={markdown} className="w-full h-full" />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* AI Tools Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Flashcards */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-600" />
+                  閃卡生成
+                  {hasFlashcardsArtifact && (
+                    <Badge variant="default" className="bg-green-100 text-green-700">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      已保存
+                    </Badge>
+                  )}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleGenerateFlashcards}
+                    disabled={generatingCards}
+                  >
+                    {generatingCards ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {generatingCards ? '生成中...' : '生成'}
+                  </Button>
+                  {flashcards && (
+                    <Button 
+                      size="sm"
+                      onClick={handleSaveFlashcards}
+                      disabled={savingCards || hasFlashcardsArtifact}
+                    >
+                      {savingCards ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {savingCards ? '保存中...' : hasFlashcardsArtifact ? '已保存' : '保存'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!flashcards ? (
+                <div className="text-center py-8">
+                  <FileText className="h-12 w-12 mx-auto mb-3 text-slate-400" />
+                  <p className="text-slate-500 mb-4">
+                    {generatingCards ? '正在從筆記內容生成閃卡...' : '點擊「生成」創建學習閃卡'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {flashcards.map((card, index) => (
+                    <div key={index} className="p-3 border rounded-lg bg-slate-50">
+                      <div className="font-medium text-slate-900 mb-1">
+                        Q: {card.front}
+                      </div>
+                      <div className="text-slate-600 text-sm">
+                        A: {card.back}
+                      </div>
+                      {card.tags && (
+                        <div className="flex gap-1 mt-2">
+                          {card.tags.map((tag: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quiz */}
+          <Card className="shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-green-600" />
+                  測驗生成
+                  {hasQuizArtifact && (
+                    <Badge variant="default" className="bg-green-100 text-green-700">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      已保存
+                    </Badge>
+                  )}
+                </CardTitle>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleGenerateQuiz}
+                    disabled={generatingQuiz}
+                  >
+                    {generatingQuiz ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4" />
+                    )}
+                    {generatingQuiz ? '生成中...' : '生成'}
+                  </Button>
+                  {quiz && (
+                    <Button 
+                      size="sm"
+                      onClick={handleSaveQuiz}
+                      disabled={savingQuiz || hasQuizArtifact}
+                    >
+                      {savingQuiz ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      {savingQuiz ? '保存中...' : hasQuizArtifact ? '已保存' : '保存'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {!quiz ? (
+                <div className="text-center py-8">
+                  <BookOpen className="h-12 w-12 mx-auto mb-3 text-slate-400" />
+                  <p className="text-slate-500 mb-4">
+                    {generatingQuiz ? '正在從筆記內容生成測驗...' : '點擊「生成」創建練習測驗'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                  {quiz.questions?.map((question: any, index: number) => (
+                    <div key={index} className="p-3 border rounded-lg bg-slate-50">
+                      <div className="font-medium text-slate-900 mb-2">
+                        {index + 1}. {question.stem}
+                      </div>
+                      {question.choices && (
+                        <div className="space-y-1 mb-2">
+                          {question.choices.map((choice: string, i: number) => (
+                            <div key={i} className="text-sm text-slate-600">
+                              {String.fromCharCode(65 + i)}. {choice}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {question.explain && (
+                        <div className="text-xs text-slate-500 mt-2 p-2 bg-blue-50 rounded">
+                          <strong>解釋：</strong>{question.explain}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Summary */}
+        {savedArtifacts.length > 0 && (
+          <Card className="shadow-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
+                已保存的學習工具
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4">
+                {savedArtifacts.map((artifact) => (
+                  <Badge key={artifact.id} variant="outline" className="bg-green-50 text-green-700">
+                    {artifact.kind === 'flashcards' && '閃卡'}
+                    {artifact.kind === 'quiz' && '測驗'}
+                    {artifact.kind === 'markmap' && '思維導圖'}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )

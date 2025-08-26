@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Button } from "@/components/ui/button"
@@ -37,6 +37,9 @@ export default function NoteEditorPage() {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
 
+  // 用於編輯器的穩定初始內容 - 避免重建編輯器
+  const initialContentRef = useRef<string>("")
+
   // Debounced autosave
   const [saveTimeout, setSaveTimeout] = useState<NodeJS.Timeout>()
 
@@ -54,6 +57,7 @@ export default function NoteEditorPage() {
         
         // Use content_md if available, fallback to legacy content
         const initialContent = noteData.content_md || noteData.content || ""
+        initialContentRef.current = initialContent // 穩定的初始內容，只設定一次
         setContent(initialContent)
       } else {
         setError("筆記不存在或已被刪除")
@@ -203,16 +207,16 @@ export default function NoteEditorPage() {
           />
         </div>
         
-        {/* Status indicators */}
+        {/* Status indicators - 右上角浮動膠囊 */}
         <div className="flex items-center gap-2">
           {saving && (
-            <div className="flex items-center gap-1 text-sm text-slate-500">
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 text-sm rounded-full border border-blue-200">
               <Loader2 className="h-3 w-3 animate-spin" />
               保存中...
             </div>
           )}
           {success && (
-            <div className="flex items-center gap-1 text-sm text-green-600">
+            <div className="flex items-center gap-1 px-3 py-1.5 bg-green-50 text-green-700 text-sm rounded-full border border-green-200">
               <CheckCircle className="h-3 w-3" />
               已保存
             </div>
@@ -272,15 +276,16 @@ export default function NoteEditorPage() {
       {/* Main Content */}
       <div className="flex-1 p-6">
         {showPreview ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-16rem)]">
             {/* Editor */}
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle className="text-lg">編輯器</CardTitle>
+            <Card className="h-full shadow-sm">
+              <CardHeader className="border-b bg-slate-50/50">
+                <CardTitle className="text-lg font-semibold text-slate-800">✏️ 編輯器</CardTitle>
               </CardHeader>
-              <CardContent className="h-[calc(100%-5rem)] overflow-hidden">
+              <CardContent className="h-[calc(100%-4rem)] overflow-hidden p-4">
                 <SimpleBlockNoteUnified
-                  initialMarkdown={content}
+                  key={noteId} 
+                  initialMarkdown={initialContentRef.current}
                   onChange={handleContentChange}
                   className="h-full"
                 />
@@ -288,24 +293,25 @@ export default function NoteEditorPage() {
             </Card>
 
             {/* Mindmap Preview */}
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle className="text-lg">思維導圖預覽</CardTitle>
+            <Card className="h-full shadow-sm">
+              <CardHeader className="border-b bg-slate-50/50">
+                <CardTitle className="text-lg font-semibold text-slate-800">🧠 思維導圖預覽</CardTitle>
               </CardHeader>
-              <CardContent className="h-[calc(100%-5rem)]">
+              <CardContent className="h-[calc(100%-4rem)] p-4">
                 <MarkmapViewer 
                   markdown={content} 
-                  className="w-full h-full border rounded"
+                  className="w-full h-full border rounded-lg bg-white"
                 />
               </CardContent>
             </Card>
           </div>
         ) : (
           /* Full Editor */
-          <Card className="h-full">
+          <Card className="h-[calc(100vh-12rem)] shadow-sm">
             <CardContent className="p-6 h-full">
               <SimpleBlockNoteUnified
-                initialMarkdown={content}
+                key={noteId}
+                initialMarkdown={initialContentRef.current}
                 onChange={handleContentChange}
                 className="h-full"
               />
