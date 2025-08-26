@@ -19,6 +19,8 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
   useEffect(() => {
     if (!svgRef.current) return
     
+    let resizeObserver: ResizeObserver | null = null
+    
     try {
       // 載入樣式
       const loadStyles = () => {
@@ -130,8 +132,7 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
       const svg = svgRef.current
       svg.style.width = '100%'
       svg.style.height = '100%'
-      svg.setAttribute('width', '800')
-      svg.setAttribute('height', '600')
+      // 讓 SVG 自適應容器大小，不設置固定尺寸
       
       // 初始化 Transformer 和 Markmap
       tfRef.current = new Transformer()
@@ -160,6 +161,24 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
         }
       }, 100)
 
+      // 添加 ResizeObserver 來監聽容器大小變化
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          if (mmRef.current && entry.target === containerRef.current) {
+            // 延遲執行以確保容器已經調整完成
+            setTimeout(() => {
+              if (mmRef.current) {
+                mmRef.current.fit()
+              }
+            }, 100)
+          }
+        }
+      })
+
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current)
+      }
+
       // 添加控制按鈕
       addZoomControls()
       
@@ -169,6 +188,10 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
     }
 
     return () => {
+      // 清理 ResizeObserver
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
       mmRef.current = null
     }
   }, [])
@@ -257,13 +280,12 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
   }
 
   return (
-    <div ref={containerRef} className={`markmap-viewer-container ${className}`} style={{ minHeight: '700px', width: '100%', height: '700px' }}>
+    <div ref={containerRef} className={`markmap-viewer-container ${className}`} style={{ width: '100%', height: '100%' }}>
       <svg
         ref={svgRef}
         style={{
           width: '100%',
           height: '100%',
-          minHeight: '700px',
           display: 'block'
         }}
         viewBox="0 0 800 600"

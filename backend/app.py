@@ -179,17 +179,20 @@ def generate_quiz():
         # Support note_id parameter for AI Studio
         if note_id and not notes:
             try:
-                from utils.sqlite_helpers import get_db_connection
-                with get_db_connection() as db:
-                    cursor = db.execute(
-                        "SELECT content_md, content FROM notes WHERE id = ? AND user_id = ?",
-                        (note_id, g.user['id'])
-                    )
-                    row = cursor.fetchone()
-                    if not row:
+                from models import Note
+                from services.database_service import DatabaseService
+                from sqlalchemy import and_
+                db_service = DatabaseService()
+                with db_service.get_session() as s:
+                    note = s.query(Note).filter(and_(
+                        Note.id == note_id,
+                        Note.user_id == g.user['id'],
+                        Note.deleted_at.is_(None)
+                    )).first()
+                    if not note:
                         return jsonify({"ok": False, "error": "筆記不存在或無權訪問"}), 404
                     
-                    notes = row[0] or row[1] or ''
+                    notes = note.content_md or note.content or ''
             except Exception as e:
                 return jsonify({"ok": False, "error": f"獲取筆記失敗: {str(e)}"}), 500
         
@@ -232,17 +235,38 @@ def generate_quiz():
 
 @app.route('/api/generate-flashcards', methods=['POST'])
 def generate_flashcards_enhanced():
-    """Generate flashcards from note content"""
+    """Generate flashcards from note content or note_id"""
     try:
-        data = request.json
+        data = request.json or {}
         note_content = data.get('note_content')
+        note_id = data.get('note_id')
         count = data.get('count', 15)
         difficulty = data.get('difficulty', 'medium')
         types = data.get('types', ['definition', 'example'])
         language = data.get('language', 'zh-tw')
 
+        # Support note_id parameter for AI Studio
+        if note_id and not note_content:
+            try:
+                from models import Note
+                from services.database_service import DatabaseService
+                from sqlalchemy import and_
+                db_service = DatabaseService()
+                with db_service.get_session() as s:
+                    note = s.query(Note).filter(and_(
+                        Note.id == note_id,
+                        Note.user_id == g.user['id'],
+                        Note.deleted_at.is_(None)
+                    )).first()
+                    if not note:
+                        return jsonify({"ok": False, "error": "筆記不存在或無權訪問"}), 404
+                    
+                    note_content = note.content_md or note.content or ''
+            except Exception as e:
+                return jsonify({"ok": False, "error": f"獲取筆記失敗: {str(e)}"}), 500
+
         if not note_content:
-            return jsonify({"error": "Note content is required"}), 400
+            return jsonify({"ok": False, "error": "Note content is required"}), 400
 
         # Generate flashcards using OpenAI
         flashcards = openai_service.generate_flashcards(
@@ -250,13 +274,17 @@ def generate_flashcards_enhanced():
         )
 
         return jsonify({
+            "ok": True,
+            "data": {
+                "cards": flashcards
+            },
             "success": True,
             "flashcards": flashcards,
             "count": len(flashcards)
         })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route('/api/generate-notes', methods=['POST'])
 @app.route('/api/unified-notes', methods=['POST'])
