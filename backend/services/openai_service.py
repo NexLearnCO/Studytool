@@ -339,14 +339,14 @@ class OpenAIService:
 
 ## 嚴格輸出格式（只返回 JSON 數組，無任何多餘文字）
 [
-  {
+  {{
     "question": "問題（清晰可測，避免兩個以上子問題）",
     "answer": "簡潔完整的答案（包含關鍵術語/條件）",
     "hint": "可選，最短助記或線索",
     "difficulty": 1,
     "tags": ["Definition"],
     "type": "Definition"
-  }
+  }}
 ]
 
 注意：
