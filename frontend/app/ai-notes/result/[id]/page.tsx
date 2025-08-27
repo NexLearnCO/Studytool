@@ -71,6 +71,9 @@ export default function AIResultPage() {
   // Loading states
   const [generatingCards, setGeneratingCards] = useState(false)
   const [generatingQuiz, setGeneratingQuiz] = useState(false)
+  // Generation options
+  const [flashcardCount, setFlashcardCount] = useState<number>(10)
+  const [quizCount, setQuizCount] = useState<number>(5)
   const [savingCards, setSavingCards] = useState(false)
   const [savingQuiz, setSavingQuiz] = useState(false)
 
@@ -137,7 +140,7 @@ export default function AIResultPage() {
       setGeneratingCards(true)
       setError("")
       
-      const response = await generateFlashcardsFromNote(id)
+      const response = await generateFlashcardsFromNote(id, { count: flashcardCount })
       console.log('Flashcards response:', response)
       
       if (!response.ok) {
@@ -204,7 +207,7 @@ export default function AIResultPage() {
       setGeneratingQuiz(true)
       setError("")
       
-      const response = await generateQuizFromNote(id)
+      const response = await generateQuizFromNote(id, { count: quizCount })
       console.log('Quiz response:', response)
       
       if (!response.ok) {
@@ -585,7 +588,19 @@ export default function AIResultPage() {
                             從筆記內容智能生成記憶卡片，支持編輯和自定義
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-center">
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span>數量</span>
+                            <select
+                              className="h-8 border rounded px-2 text-sm"
+                              value={flashcardCount}
+                              onChange={(e) => setFlashcardCount(Number(e.target.value))}
+                            >
+                              {[5,10,15,20,25,30,35,40].map(n => (
+                                <option key={n} value={n}>{n}</option>
+                              ))}
+                            </select>
+                          </div>
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -771,7 +786,18 @@ export default function AIResultPage() {
                             從筆記內容智能生成練習測驗
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 items-center">
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span>題數</span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={50}
+                              value={quizCount}
+                              onChange={(e) => setQuizCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
+                              className="w-20 h-8 border rounded px-2 text-sm"
+                            />
+                          </div>
                           <Button 
                             variant="outline" 
                             size="sm"

@@ -357,15 +357,17 @@ POST /api/text-to-notes
 ### 從筆記生成閃卡
 
 ```http
-POST /api/generate-flashcards-from-notes
+POST /api/generate-flashcards
 ```
 
 **請求體:**
 ```json
 {
-  "notes": "筆記內容...",
+  "note_id": "123" | null,
+  "note_content": "可選：直接傳內容",
   "count": 10,
   "difficulty": "medium",
+  "types": ["definition", "example"],
   "language": "zh-tw"
 }
 ```
@@ -390,15 +392,15 @@ POST /api/generate-flashcards-from-notes
 ### 從筆記生成測驗
 
 ```http
-POST /api/generate-quiz-from-notes
+POST /api/generate-quiz
 ```
 
 **請求體:**
 ```json
 {
-  "notes": "筆記內容...",
+  "note_id": "123" | null,
+  "notes": "可選：直接傳內容",
   "count": 5,
-  "difficulty": "medium",
   "language": "zh-tw"
 }
 ```

@@ -175,6 +175,7 @@ def generate_quiz():
         notes = data.get('notes')
         note_id = data.get('note_id')
         language = data.get('language', 'zh-tw')
+        count = int(data.get('count', 5))
         
         # Support note_id parameter for AI Studio
         if note_id and not notes:
@@ -199,7 +200,7 @@ def generate_quiz():
         if not notes:
             return jsonify({"ok": False, "error": "Notes are required"}), 400
         
-        quiz_json = openai_service.generate_quiz(notes, language)
+        quiz_json = openai_service.generate_quiz(notes, language, count)
         
         # Try to parse JSON, with fallback for malformed responses
         try:
@@ -262,6 +263,13 @@ def generate_flashcards_enhanced():
                         return jsonify({"ok": False, "error": "筆記不存在或無權訪問"}), 404
                     
                     note_content = note.content_md or note.content or ''
+                    # Use note language if available to ensure consistency with note
+                    try:
+                        note_lang = getattr(note, 'language', None)
+                        if note_lang:
+                            language = note_lang
+                    except Exception:
+                        pass
             except Exception as e:
                 return jsonify({"ok": False, "error": f"獲取筆記失敗: {str(e)}"}), 500
 

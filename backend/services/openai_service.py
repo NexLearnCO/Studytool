@@ -313,45 +313,47 @@ class OpenAIService:
         selected_types = [type_desc[t] for t in types if t in type_desc]
 
         prompt = f"""
-基於提供的學習筆記，創建 {count} 張高質量的記憶卡片用於學習復習。
+你是一位專業的教育心理學家與教學設計師。請根據提供的學習筆記，生成 {count} 張高品質、可直接用於間隔重複的學習閃卡。
 
-## 卡片要求：
+## 產出規格
 - 數量：{count} 張
 - 難度：{difficulty}
-- 包含類型：{', '.join(selected_types)}
+- 類型覆蓋：{', '.join(selected_types)}（可綜合分配）
+- 語言：{language_instruction}
 
-## 卡片設計原則：
+## 質量標準（務必全部滿足）
+1) 問題設計
+   - 單一聚焦：每張卡只測一個明確知識點
+   - 可測可回：問題具體、可被驗證，不要過度開放
+   - 主動回憶：避免是非題與過長導語
+   - 去重去噪：避免內容重複或高度相似
 
-1. **問題設計**
-   - 針對關鍵概念創建明確的問題
-   - 使用不同類型的問題（定義、應用、比較等）
-   - 確保問題具有挑戰性但可回答
-   - 避免過於模糊或過於簡單的問題
+2) 答案設計
+   - 簡潔完整：一句到數句即可涵蓋必要關鍵詞
+   - 上下文足夠：含核心定義/條件/結論；必要時給最短助記
+   - 不要贅詞：避免無信息價值的套話
 
-2. **答案要求**
-   - 提供準確、完整的答案
-   - 包含足夠的上下文信息
-   - 使用清晰的解釋和例子
-   - 適合記憶和理解
+3) 覆蓋與分布
+   - 優先覆蓋核心概念、定義、規則與常見易錯點
+   - 適度加入應用型與比較型題，保持難度分布
 
-3. **學習效果**
-   - 涵蓋筆記中的所有重要概念
-   - 平衡記憶和理解類問題
-   - 支持間隔重複學習法
-   - 適合自我測試
-
-**語言設置：**
-{language_instruction}
-
-**格式要求：**
-返回 JSON 格式，包含 10 張卡片：
-
+## 嚴格輸出格式（只返回 JSON 數組，無任何多餘文字）
 [
-  {{"question": "清晰的問題", "answer": "詳細的答案"}},
-  {{"question": "另一個問題", "answer": "對應的答案"}}
+  {
+    "question": "問題（清晰可測，避免兩個以上子問題）",
+    "answer": "簡潔完整的答案（包含關鍵術語/條件）",
+    "hint": "可選，最短助記或線索",
+    "difficulty": 1,
+    "tags": ["Definition"],
+    "type": "Definition"
+  }
 ]
 
-基於以下筆記內容創建記憶卡片：
+注意：
+- tags 與 type 取值必須從以下集合中選擇：Definition, Concept, Application, Comparison
+- difficulty 使用 1..5 的整數（1=容易，5=困難）
+
+## 來源筆記
 {notes}
 """
         
@@ -391,8 +393,13 @@ class OpenAIService:
         except Exception as e:
             raise Exception(f"Failed to generate flashcards: {str(e)}")
     
-    def generate_quiz(self, notes, language='zh-tw'):
-        """Generate quiz from notes"""
+    def generate_quiz(self, notes, language='zh-tw', count: int = 5):
+        """Generate quiz from notes
+        Args:
+            notes: Source notes content
+            language: Output language
+            count: Number of questions to generate
+        """
         
         # Language-specific instructions for quiz
         language_instructions = {
@@ -430,7 +437,7 @@ class OpenAIService:
 {language_instruction}
 
 **格式要求：**
-返回 JSON 格式，包含 5 道選擇題：
+返回 JSON 格式，包含 {count} 道選擇題：
 
 [
   {{
