@@ -47,6 +47,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
   const [step, setStep] = useState<number>(1)
+  const [payloadMode, setPayloadMode] = useState<'legacy' | 'tunnel'>('legacy')
 
   // Form state
   const [title, setTitle] = useState("")
@@ -87,6 +88,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setSuccess(false)
     setProgress(0)
     setStep(1)
+    setPayloadMode('legacy')
   }
 
   const handleGenerate = async () => {
@@ -139,27 +141,56 @@ export function AINotesModal({ children }: AINotesModalProps) {
 
       const processedFiles = await Promise.all(filePromises)
 
-      // Build request data (standardized keys + legacy for compatibility)
+      // Validate required fields in Tunnel mode
+      if (payloadMode === 'tunnel') {
+        if (!examSystem || !subject || !detailLevel || !language || !mode) {
+          setError('請填寫必填欄位（考試制度、科目、詳細程度、語言、模式）')
+          setLoading(false)
+          return
+        }
+      }
+
+      // Build request data
       const detailLevelStd = detailLevel === 'medium' ? 'normal' : (detailLevel === 'detailed' ? 'deep' : 'brief')
-      const requestData: any = {
-        // Standardized
-        title: title || "AI 生成筆記",
-        exam_system: examSystem,
-        subject: subject,
-        detail_level: detailLevelStd,
-        expand_level: expansion,
-        language: language,
-        mode: mode,
-        // Legacy
-        examSystem: examSystem,
-        detailLevel: detailLevel,
-        expansion: expansion,
-        topic: topic,
-        sources: {
-          youtube: youtubeUrls.filter(url => url.trim()),
-          text: textInput.trim() ? [textInput.trim()] : [],
-          webpages: webpageUrls.filter(url => url.trim()),
-          files: processedFiles
+      let requestData: any
+      if (payloadMode === 'tunnel') {
+        requestData = {
+          title: title || 'AI 生成筆記',
+          exam_system: examSystem,
+          subject: subject,
+          detail_level: detailLevelStd,
+          expand_level: expansion,
+          language: language,
+          mode: mode,
+          // For now keep legacy-style sources object to support file uploads until ingest doc_id is ready
+          sources: {
+            youtube: youtubeUrls.filter(url => url.trim()),
+            text: textInput.trim() ? [textInput.trim()] : [],
+            webpages: webpageUrls.filter(url => url.trim()),
+            files: processedFiles
+          },
+          options: {
+            generate_flashcards: false,
+            generate_quiz: false
+          }
+        }
+      } else {
+        // Legacy payload
+        requestData = {
+          title: title || 'AI 生成筆記',
+          examSystem: examSystem,
+          subject: subject,
+          topic: topic,
+          detailLevel: detailLevel,
+          language: language,
+          mode: mode,
+          expansion: expansion,
+          sources: {
+            youtube: youtubeUrls.filter(url => url.trim()),
+            text: textInput.trim() ? [textInput.trim()] : [],
+            webpages: webpageUrls.filter(url => url.trim()),
+            files: processedFiles
+          }
         }
       }
 
@@ -195,7 +226,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
           content_md: result.notes,
           content: result.notes, // Legacy fallback
           language: requestData.language,
-          exam_system: requestData.examSystem,
+          exam_system: requestData.exam_system || requestData.examSystem,
           subject: requestData.subject,
           topic: requestData.topic,
           tags: [] // Could be enhanced with AI-extracted tags
@@ -206,7 +237,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
         }
         
         const newNoteId = createResult.data.id
-        track('NOTE_CREATED', { note_id: newNoteId, language, subject, exam_system: examSystem })
+        track('NOTE_CREATED', { note_id: newNoteId, language, subject, exam_system: examSystem, payload_mode: payloadMode })
         
         // Close modal and redirect to AI result page (preserve the result flow!)
         setOpen(false)
@@ -339,25 +370,15 @@ export function AINotesModal({ children }: AINotesModalProps) {
         )}
 
         <div className="space-y-6">
-          {/* Wizard header */}
+          {/* Payload mode toggle */}
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2 text-sm">
-              <span className={`px-2 py-1 rounded ${step===1? 'bg-blue-600 text-white':'bg-slate-200 text-slate-700'}`}>① 基本資訊</span>
-              <span className={`px-2 py-1 rounded ${step===2? 'bg-blue-600 text-white':'bg-slate-200 text-slate-700'}`}>② 上傳與來源</span>
-              <span className={`px-2 py-1 rounded ${step===3? 'bg-blue-600 text-white':'bg-slate-200 text-slate-700'}`}>③ 送出</span>
-            </div>
+            <div className="text-sm text-slate-600">提交模式：</div>
             <div className="flex items-center gap-2">
-              {step>1 && (
-                <Button variant="outline" size="sm" onClick={()=>setStep(step-1)} disabled={loading}>上一步</Button>
-              )}
-              {step<3 && (
-                <Button size="sm" onClick={()=> setStep(step+1)} disabled={loading || (step===2 && !hasValidSources())}>下一步</Button>
-              )}
+              <Button variant={payloadMode==='legacy' ? 'default' : 'outline'} size="sm" onClick={()=>setPayloadMode('legacy')} disabled={loading}>Legacy</Button>
+              <Button variant={payloadMode==='tunnel' ? 'default' : 'outline'} size="sm" onClick={()=>setPayloadMode('tunnel')} disabled={loading}>Tunnel</Button>
             </div>
           </div>
 
-          {/* Step 1 */}
-          {step === 1 && (
           <div className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -476,10 +497,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
               </div>
             </div>
           </div>
-          )}
-
-          {/* Step 2 */}
-          {step === 2 && (
+          
           <div className="space-y-6">
             {/* File Upload - Primary Feature */}
             <div className="space-y-4">
@@ -647,11 +665,6 @@ export function AINotesModal({ children }: AINotesModalProps) {
                 </div>
               )}
             </div>
-          </div>
-          )}
-
-          {/* Step 3 */}
-          {step === 3 && (
           <div className="space-y-6">
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">送出</h3>
@@ -685,7 +698,6 @@ export function AINotesModal({ children }: AINotesModalProps) {
               </div>
             )}
           </div>
-          )}
         </div>
       </DialogContent>
     </Dialog>
