@@ -54,6 +54,8 @@ export function AINotesModal({ children }: AINotesModalProps) {
   const [topic, setTopic] = useState("")
   const [detailLevel, setDetailLevel] = useState("medium")
   const [language, setLanguage] = useState("zh-tw")
+  const [mode, setMode] = useState("hybrid")
+  const [expansion, setExpansion] = useState(0)
   
   // Sources
   const [youtubeUrls, setYoutubeUrls] = useState([""])
@@ -114,6 +116,8 @@ export function AINotesModal({ children }: AINotesModalProps) {
         topic: topic,
         detailLevel: detailLevel,
         language: language,
+        mode: mode,
+        expansion: expansion,
         sources: {
           youtube: youtubeUrls.filter(url => url.trim()),
           text: textInput.trim() ? [textInput.trim()] : [],
@@ -380,6 +384,35 @@ export function AINotesModal({ children }: AINotesModalProps) {
                       <SelectItem value="zh-tw">🇹🇼 繁體中文</SelectItem>
                       <SelectItem value="zh-cn">🇨🇳 简体中文</SelectItem>
                       <SelectItem value="en">🇺🇸 English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="mode">生成模式</Label>
+                  <Select value={mode} onValueChange={setMode}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hybrid">Hybrid（預設）</SelectItem>
+                      <SelectItem value="blueprint">Blueprint-only</SelectItem>
+                      <SelectItem value="outline">Outline-only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expansion">擴充程度</Label>
+                  <Select value={String(expansion)} onValueChange={(v) => setExpansion(parseInt(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0 - 僅整理（不新增）</SelectItem>
+                      <SelectItem value="1">1 - 可補缺漏（需來源）</SelectItem>
+                      <SelectItem value="2">2 - 背景補充（標記補充）</SelectItem>
+                      <SelectItem value="3">3 - 限課綱內擴展</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
