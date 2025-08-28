@@ -46,6 +46,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
   const [generatedNotes, setGeneratedNotes] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [step, setStep] = useState<number>(1)
 
   // Form state
   const [title, setTitle] = useState("")
@@ -85,6 +86,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setError("")
     setSuccess(false)
     setProgress(0)
+    setStep(1)
   }
 
   const handleGenerate = async () => {
@@ -137,16 +139,22 @@ export function AINotesModal({ children }: AINotesModalProps) {
 
       const processedFiles = await Promise.all(filePromises)
 
-      // Build request data to match backend API
-      const requestData = {
+      // Build request data (standardized keys + legacy for compatibility)
+      const detailLevelStd = detailLevel === 'medium' ? 'normal' : (detailLevel === 'detailed' ? 'deep' : 'brief')
+      const requestData: any = {
+        // Standardized
         title: title || "AI 生成筆記",
-        examSystem: examSystem,
+        exam_system: examSystem,
         subject: subject,
-        topic: topic,
-        detailLevel: detailLevel,
+        detail_level: detailLevelStd,
+        expand_level: expansion,
         language: language,
         mode: mode,
+        // Legacy
+        examSystem: examSystem,
+        detailLevel: detailLevel,
         expansion: expansion,
+        topic: topic,
         sources: {
           youtube: youtubeUrls.filter(url => url.trim()),
           text: textInput.trim() ? [textInput.trim()] : [],
@@ -331,7 +339,25 @@ export function AINotesModal({ children }: AINotesModalProps) {
         )}
 
         <div className="space-y-6">
-          {/* Configuration Section */}
+          {/* Wizard header */}
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2 text-sm">
+              <span className={`px-2 py-1 rounded ${step===1? 'bg-blue-600 text-white':'bg-slate-200 text-slate-700'}`}>① 基本資訊</span>
+              <span className={`px-2 py-1 rounded ${step===2? 'bg-blue-600 text-white':'bg-slate-200 text-slate-700'}`}>② 上傳與來源</span>
+              <span className={`px-2 py-1 rounded ${step===3? 'bg-blue-600 text-white':'bg-slate-200 text-slate-700'}`}>③ 送出</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {step>1 && (
+                <Button variant="outline" size="sm" onClick={()=>setStep(step-1)} disabled={loading}>上一步</Button>
+              )}
+              {step<3 && (
+                <Button size="sm" onClick={()=> setStep(step+1)} disabled={loading || (step===2 && !hasValidSources())}>下一步</Button>
+              )}
+            </div>
+          </div>
+
+          {/* Step 1 */}
+          {step === 1 && (
           <div className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -449,7 +475,12 @@ export function AINotesModal({ children }: AINotesModalProps) {
                 </div>
               </div>
             </div>
+          </div>
+          )}
 
+          {/* Step 2 */}
+          {step === 2 && (
+          <div className="space-y-6">
             {/* File Upload - Primary Feature */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -616,8 +647,17 @@ export function AINotesModal({ children }: AINotesModalProps) {
                 </div>
               )}
             </div>
+          </div>
+          )}
 
-            {/* Generate Button */}
+          {/* Step 3 */}
+          {step === 3 && (
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">送出</h3>
+              <p className="text-sm text-slate-600">將依序進行：抽取 → 對齊 → 寫稿 → 組稿</p>
+            </div>
+
             <Button
               onClick={handleGenerate}
               disabled={loading || !hasValidSources()}
@@ -645,6 +685,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
               </div>
             )}
           </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
