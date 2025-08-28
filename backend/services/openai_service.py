@@ -378,17 +378,54 @@ class OpenAIService:
                 # Extract JSON from response if it's wrapped in text
                 json_match = re.search(r'\[.*\]', content, re.DOTALL)
                 if json_match:
-                    flashcards = json.loads(json_match.group())
+                    try:
+                        flashcards = json.loads(json_match.group())
+                    except Exception:
+                        flashcards = []
                 else:
-                    # Fallback: create simple flashcards
-                    flashcards = [
-                        {
-                            "question": "What is the main topic of these notes?",
-                            "answer": "Based on the provided content, this covers the key concepts discussed in the notes."
-                        }
-                    ]
+                    flashcards = []
+
+            # Validate and normalize list of Q/A
+            if not isinstance(flashcards, list):
+                # Sometimes models wrap as {"flashcards": [...]} or similar
+                if isinstance(flashcards, dict):
+                    fc = flashcards.get('flashcards') or flashcards.get('cards')
+                    if isinstance(fc, list):
+                        flashcards = fc
+                    else:
+                        flashcards = []
+                else:
+                    flashcards = []
+
+            valid = []
+            for item in flashcards:
+                if not isinstance(item, dict):
+                    continue
+                q = item.get('question') or item.get('Q') or item.get('front')
+                a = item.get('answer') or item.get('A') or item.get('back')
+                if isinstance(q, str) and isinstance(a, str) and q.strip() and a.strip():
+                    valid.append({
+                        "question": q.strip(),
+                        "answer": a.strip(),
+                        "hint": item.get('hint') or "",
+                        "difficulty": item.get('difficulty') or 3,
+                        "tags": item.get('tags') or [],
+                        "type": item.get('type') or ""
+                    })
+
+            if not valid:
+                valid = [
+                    {
+                        "question": "What is the main topic of these notes?",
+                        "answer": "Based on the provided content, this covers the key concepts discussed in the notes.",
+                        "hint": "",
+                        "difficulty": 3,
+                        "tags": [],
+                        "type": ""
+                    }
+                ]
             
-            return flashcards
+            return valid
             
         except Exception as e:
             raise Exception(f"Failed to generate flashcards: {str(e)}")
@@ -460,7 +497,9 @@ class OpenAIService:
                 temperature=0.5
             )
             
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            # Return raw content; parsing is done in app layer with robust extractor
+            return content
             
         except Exception as e:
             raise Exception(f"Failed to generate quiz: {str(e)}")

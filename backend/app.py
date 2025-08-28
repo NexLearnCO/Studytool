@@ -8,6 +8,7 @@ from services.flashcard_service import FlashcardService
 from api.notes import notes_bp
 from api.events import events_bp
 from api.artifacts import artifacts_bp
+from api.ingest import ingest_bp
 from utils.sqlite_helpers import ensure_note_columns
 import json
 import os
@@ -26,6 +27,7 @@ CORS(app,
 app.register_blueprint(notes_bp, url_prefix='/api/v1')
 app.register_blueprint(events_bp, url_prefix='/api/v1')
 app.register_blueprint(artifacts_bp)
+app.register_blueprint(ingest_bp, url_prefix='/api/v1')
 
 # Ensure schema is up to date
 try:
