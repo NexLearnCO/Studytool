@@ -194,6 +194,13 @@ def generate_quiz():
                         return jsonify({"ok": False, "error": "筆記不存在或無權訪問"}), 404
                     
                     notes = note.content_md or note.content or ''
+                    # Align quiz language with note language when available
+                    try:
+                        note_lang = getattr(note, 'language', None)
+                        if note_lang:
+                            language = note_lang
+                    except Exception:
+                        pass
             except Exception as e:
                 return jsonify({"ok": False, "error": f"獲取筆記失敗: {str(e)}"}), 500
         
