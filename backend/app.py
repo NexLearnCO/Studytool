@@ -12,6 +12,8 @@ from api.ingest import ingest_bp
 from utils.sqlite_helpers import ensure_note_columns
 import json
 import os
+import pathlib
+import time
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -370,6 +372,7 @@ def unified_notes():
 
         all_content = []
         source_info = []
+        chunk_meta = []  # collect per-source metadata for improved chunks
 
         # Process YouTube sources
         for url in normalized['youtube']:
@@ -382,6 +385,7 @@ def unified_notes():
                         'title': video_info.get('title', url),
                         'url': url
                     })
+                    chunk_meta.append({'doc_id': f'youtube:{video_info.get("video_id", url)}'})
                 except Exception as e:
                     print(f"YouTube processing error for {url}: {e}")
 
@@ -390,6 +394,26 @@ def unified_notes():
             try:
                 # Skip placeholder doc entries without data
                 if file_info and file_info.get('data'):
+                    name_lower = (file_info.get('name', '') or '').lower()
+                    if name_lower.endswith('.pdf'):
+                        try:
+                            pdf_chunks = pdf_service.extract_chunks_with_metadata(file_info)
+                            if pdf_chunks:
+                                concatenated = '\n\n'.join([c['text'] for c in pdf_chunks if c.get('kind') == 'text'])
+                                if concatenated:
+                                    all_content.append(concatenated)
+                                source_info.append({
+                                    'type': 'file',
+                                    'name': file_info.get('name', 'unknown'),
+                                    'size': file_info.get('size', 0),
+                                    'chunks': len(pdf_chunks)
+                                })
+                                chunk_meta.append({'doc_id': f'file:{file_info.get("name","unknown")}'})
+                                context_info.setdefault('file_chunks', []).extend(pdf_chunks)
+                                continue
+                        except Exception as e:
+                            print(f"PyMuPDF chunking error: {e}")
+                    # Fallback to plain text extraction
                     file_content = pdf_service.extract_text_from_file(file_info)
                     all_content.append(file_content)
                     source_info.append({
@@ -397,6 +421,7 @@ def unified_notes():
                         'name': file_info.get('name', 'unknown'),
                         'size': file_info.get('size', 0)
                     })
+                    chunk_meta.append({'doc_id': f'file:{file_info.get("name","unknown")}'})
             except Exception as e:
                 print(f"File processing error: {e}")
 
@@ -408,6 +433,7 @@ def unified_notes():
                     'type': 'text',
                     'preview': text[:100] + '...' if len(text) > 100 else text
                 })
+                chunk_meta.append({'doc_id': 'text:input'})
 
         # Process webpage sources
         for url in normalized['webpages']:
@@ -428,6 +454,7 @@ def unified_notes():
                             'url': url,
                             'title': soup.title.string if soup.title else url
                         })
+                        chunk_meta.append({'doc_id': f'web:{url}'})
                 except Exception as e:
                     print(f"Webpage processing error for {url}: {e}")
 
@@ -435,6 +462,15 @@ def unified_notes():
             return jsonify({"error": "No valid content found from sources"}), 400
 
         combined_content = '\n\n'.join(all_content)
+
+        # Build naive chunks with IDs for routing and section writing
+        raw_parts = [p.strip() for p in combined_content.split('\n\n') if p.strip()]
+        # assign doc_id per block roughly by distributing meta indices
+        def meta_for(i: int):
+            if not chunk_meta:
+                return {}
+            return chunk_meta[min(i // max(1, len(raw_parts)//max(1,len(chunk_meta))), len(chunk_meta)-1)]
+        chunks = [{'id': f'c{i}', 'kind': 'text', 'text': part, **meta_for(i)} for i, part in enumerate(raw_parts[:80])]  # cap size
 
         context_info = {
             'title': title,
@@ -448,12 +484,249 @@ def unified_notes():
             'sources': source_info
         }
 
-        notes = openai_service.generate_unified_notes(
-            combined_content,
-            detail_level,
-            language,
-            context_info
-        )
+        # Attach blueprint/exam files if available for tunnel path
+        try:
+            base_dir = pathlib.Path(__file__).resolve().parents[1]
+            if subject:
+                bp_path = base_dir / 'prompts' / 'blueprints' / f"{str(subject).upper()}.yaml"
+                if bp_path.exists():
+                    context_info['blueprint'] = bp_path.read_text(encoding='utf-8')
+            if exam_system:
+                ex_path = base_dir / 'prompts' / 'exams' / f"{str(exam_system).upper()}.yaml"
+                if ex_path.exists():
+                    context_info['exam_patch'] = ex_path.read_text(encoding='utf-8')
+        except Exception:
+            pass
+
+        # Pipeline wiring: branch by mode (Tunnel)
+        # Emit simple events for diagnostics
+        try:
+            from services.database_service import DatabaseService
+            from models import Event
+            db_svc = DatabaseService()
+            def emit(evt, props=None):
+                now = int(time.time()*1000)
+                with db_svc.get_session() as s:
+                    e = Event(id=str(now)+':'+mode, user_id=g.user['id'], org_id=g.user.get('org_id'), event=evt, target_type='note_gen', target_id=None, ts=now, props=json.dumps(props or {}, ensure_ascii=False))
+                    s.add(e); s.commit()
+            emit('PIPELINE_START', {'mode': mode, 'source_count': len(source_info)})
+        except Exception:
+            def emit(evt, props=None):
+                return None
+        if mode == 'outline':
+            # outline_extract → outline_refine → notes_assemble
+            try:
+                outline = openai_service.run_outline_extract(chunks)
+                if outline:
+                    outline = openai_service.run_outline_refine(outline)
+                emit('OUTLINE_DONE', {'has_outline': bool(outline)})
+            except Exception as e:
+                print(f"outline pipeline failed: {e}")
+                outline = {}
+
+            # Assemble a single document from refined outline headings using original combined content as fallback
+            sections_markdown = []
+            try:
+                secs = (outline or {}).get('sections') or []
+                # Create minimal sections from titles; real extraction will map pages later
+                for s in secs[:20]:
+                    title_line = s.get('title') or 'Section'
+                    sections_markdown.append({'name': title_line, 'markdown': f"## {title_line}\n"})
+            except Exception:
+                pass
+
+            try:
+                notes = openai_service.run_notes_assemble({
+                    'title': title,
+                    'exam_system': exam_system,
+                    'subject': subject,
+                    'language': language,
+                    'sections_markdown': sections_markdown or [{'id': 'all', 'title': context_info.get('title'), 'order': 1, 'markdown': combined_content}],
+                    'tags': []
+                })
+                emit('ASSEMBLE_DONE', {'sections': len(sections_markdown or [])})
+            except Exception as e:
+                print(f"notes assemble (outline) failed: {e}")
+                notes = openai_service.generate_unified_notes(
+                    combined_content,
+                    detail_level,
+                    language,
+                    {**context_info, 'pipeline': 'outline-fallback'}
+                )
+        elif mode == 'blueprint':
+            # section_writer → notes_assemble (initial stub: single pass)
+            variables = {
+                'exam_system': exam_system,
+                'subject': subject,
+                'language': language,
+                'detail_level': {'brief': 'brief', 'medium': 'normal', 'detailed': 'deep'}.get(detail_level, 'normal'),
+                'expand_level': expansion,
+                'section_name': topic or title,
+                'blueprint_json': context_info.get('blueprint', ''),
+                'exam_patch': context_info.get('exam_patch', ''),
+                'chunks_json': [{'kind': 'text', 'text': combined_content}],
+                'style_rules': '',
+            }
+            try:
+                notes = openai_service.run_section_writer(variables)
+                # post-process: LaTeX standardize and citation check
+                try:
+                    notes = openai_service.run_latex_standardize(notes)
+                except Exception:
+                    pass
+                try:
+                    qa = openai_service.run_citation_guard(notes)
+                    if isinstance(qa, dict) and not qa.get('ok', True):
+                        emit('CITATION_ISSUES', {'count': len(qa.get('issues') or [])})
+                except Exception:
+                    pass
+                emit('SECTION_WRITER_DONE', {'sections': 1})
+            except Exception as e:
+                print(f"section_writer failed, fallback to unified: {e}")
+                notes = openai_service.generate_unified_notes(
+                    combined_content,
+                    detail_level,
+                    language,
+                    {**context_info, 'pipeline': 'blueprint'}
+                )
+        else:
+            # hybrid (default): outline_extract → section_router → section_writer → notes_assemble
+            try:
+                outline = openai_service.run_outline_extract(chunks)
+                if outline:
+                    outline = openai_service.run_outline_refine(outline)
+                emit('OUTLINE_DONE', {'has_outline': bool(outline)})
+            except Exception as e:
+                print(f"outline pipeline failed: {e}")
+                outline = {}
+
+            try:
+                mapping = openai_service.run_section_router(
+                    context_info.get('blueprint', ''),
+                    outline or {},
+                    chunks
+                )
+                emit('ROUTER_DONE', {'mapped': bool(mapping)})
+            except Exception as e:
+                print(f"section router failed: {e}")
+                mapping = {}
+
+            # 2) write sections (select chunks per mapping if provided)
+            sections_markdown = []
+            collected_tags = set()
+            # Build section list from mapping; fallback to one section if empty
+            try:
+                mappings = mapping.get('mapping') if isinstance(mapping, dict) else None
+                if not mappings:
+                    mappings = [{
+                        'blueprint_section': context_info.get('topic') or context_info.get('title') or 'Section',
+                        'source_titles': [],
+                        'chunk_ids': []
+                    }]
+
+                # Build id->chunk map
+                id_to_chunk = {c['id']: c for c in chunks if isinstance(c, dict) and 'id' in c}
+
+                for m in mappings[:10]:  # cap
+                    variables = {
+                        'exam_system': exam_system,
+                        'subject': subject,
+                        'language': language,
+                        'detail_level': {'brief': 'brief', 'medium': 'normal', 'detailed': 'deep'}.get(detail_level, 'normal'),
+                        'expand_level': expansion,
+                        'section_name': m.get('blueprint_section') or context_info.get('topic') or context_info.get('title'),
+                        'blueprint_json': context_info.get('blueprint', ''),
+                        'exam_patch': context_info.get('exam_patch', ''),
+                        'chunks_json': [id_to_chunk[cid] for cid in (m.get('chunk_ids') or []) if cid in id_to_chunk] or chunks,
+                        'style_rules': '',
+                    }
+                    try:
+                        sec_md = openai_service.run_section_writer(variables)
+                        # Post-process: LaTeX standardize
+                        try:
+                            sec_md = openai_service.run_latex_standardize(sec_md)
+                        except Exception:
+                            pass
+                        # Detect image placeholders and generate captions when we have file_chunks
+                        try:
+                            if 'file_chunks' in context_info and any(ch.get('kind')=='image' for ch in context_info['file_chunks']):
+                                imgs = [
+                                    {
+                                        'image_id': ch.get('id'),
+                                        'doc_id': ch.get('doc_id'),
+                                        'page': ch.get('page'),
+                                        'url': ch.get('url')
+                                    }
+                                    for ch in context_info['file_chunks'] if ch.get('kind')=='image'
+                                ]
+                                caps = openai_service.run_image_captions(imgs)
+                                # naive inject: append captions section if any
+                                if isinstance(caps, list) and caps:
+                                    cap_md = "\n\n" + "\n".join([f"圖註 {c.get('image_id')}: {c.get('caption','')}" for c in caps])
+                                    sec_md += cap_md
+                        except Exception:
+                            pass
+                        # Detect simple table markers and keep as-is for now (future: call table_to_markdown on raw)
+                        # Classify tags for frontmatter
+                        try:
+                            sec_tags = openai_service.run_tags_classify(sec_md)
+                            for t in (sec_tags or []):
+                                if isinstance(t, str):
+                                    collected_tags.add(t)
+                        except Exception:
+                            pass
+                        if isinstance(sec_md, str) and sec_md.strip():
+                            sections_markdown.append({'name': variables['section_name'], 'markdown': sec_md})
+                    except Exception as e:
+                        print(f"section_writer failed for section: {e}")
+                emit('SECTION_WRITER_DONE', {'sections': len(sections_markdown)})
+            except Exception as e:
+                print(f"sections loop failed: {e}")
+
+            # 3) Append appendix for tables if available
+            try:
+                if 'file_chunks' in context_info:
+                    table_raws = [ch.get('text') for ch in context_info['file_chunks'] if ch.get('kind') == 'table' and ch.get('text')]
+                    appendix_tables = []
+                    for tr in table_raws[:10]:
+                        try:
+                            appendix_tables.append(openai_service.run_table_to_markdown(tr))
+                        except Exception:
+                            continue
+                    if appendix_tables:
+                        sections_markdown.append({'name': '附錄：表格', 'markdown': "\n\n".join(appendix_tables)})
+            except Exception:
+                pass
+
+            try:
+                notes = openai_service.run_notes_assemble({
+                    'title': title,
+                    'exam_system': exam_system,
+                    'subject': subject,
+                    'language': language,
+                    'sections_markdown': sections_markdown or [{'id': 'all', 'title': context_info.get('title'), 'order': 1, 'markdown': combined_content}],
+                    'tags': list(collected_tags)
+                })
+                emit('ASSEMBLE_DONE', {'sections': len(sections_markdown or [])})
+                # Final QA: citation guard
+                try:
+                    qa = openai_service.run_citation_guard(notes)
+                    if isinstance(qa, dict) and not qa.get('ok', True):
+                        emit('CITATION_ISSUES', {'count': len(qa.get('issues') or [])})
+                except Exception:
+                    pass
+            except Exception as e:
+                print(f"notes assemble failed: {e}")
+                notes = openai_service.generate_unified_notes(
+                    combined_content,
+                    detail_level,
+                    language,
+                    {**context_info, 'pipeline': 'hybrid-fallback'}
+                )
+        try:
+            emit('PIPELINE_END', {'mode': mode, 'words': len(notes.split())})
+        except Exception:
+            pass
 
         return jsonify({
             "success": True,

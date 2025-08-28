@@ -38,3 +38,8 @@ class Config:
         'medium': 'Create balanced notes with main points and some details',
         'detailed': 'Create comprehensive notes with all important information'
     }
+
+    # Ingest pipeline preferences
+    PREFER_MINERU = os.getenv('PREFER_MINERU', 'false').lower() == 'true'
+    MINERU_API_BASE = os.getenv('MINERU_API_BASE', '')
+    MINERU_API_KEY = os.getenv('MINERU_API_KEY', '')

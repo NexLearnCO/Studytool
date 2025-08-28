@@ -1,4 +1,5 @@
 import PyPDF2
+import fitz  # PyMuPDF
 from io import BytesIO
 import base64
 import mimetypes
@@ -92,6 +93,56 @@ class PDFService:
         if not text:
             raise ValueError("No text found in PDF")
         return text
+
+    @staticmethod
+    def extract_chunks_with_metadata(file_info):
+        """Use PyMuPDF to extract per-page chunks with bbox and image refs.
+        Returns: list of chunks [{id, kind, text|image, doc_id, page, bbox, url?}]
+        """
+        file_name = file_info.get('name', 'unknown')
+        file_data = file_info.get('data', '')
+        if file_data.startswith('data:'):
+            file_data = file_data.split(',')[1]
+        file_bytes = base64.b64decode(file_data)
+        doc = fitz.open(stream=file_bytes, filetype='pdf')
+        chunks = []
+        doc_id = f'file:{file_name}'
+        chunk_idx = 0
+        for page_index, page in enumerate(doc, 1):
+            # Text blocks
+            blocks = page.get_text("blocks") or []
+            for b in blocks:
+                x0, y0, x1, y1, text, *_ = b
+                t = (text or '').strip()
+                if not t:
+                    continue
+                chunks.append({
+                    'id': f'{doc_id}-p{page_index}-c{chunk_idx}',
+                    'kind': 'text',
+                    'text': t,
+                    'doc_id': doc_id,
+                    'page': page_index,
+                    'bbox': [x0, y0, x1, y1]
+                })
+                chunk_idx += 1
+            # Images
+            images = page.get_images(full=True) or []
+            for img in images:
+                xref = img[0]
+                try:
+                    pix = fitz.Pixmap(doc, xref)
+                    # We won't persist file; caller can decide storage. Put a placeholder url.
+                    chunks.append({
+                        'id': f'{doc_id}-p{page_index}-img{xref}',
+                        'kind': 'image',
+                        'doc_id': doc_id,
+                        'page': page_index,
+                        'bbox': None,
+                        'url': f'inline:image:{doc_id}:{page_index}:{xref}'
+                    })
+                except Exception:
+                    continue
+        return chunks
     
     @staticmethod
     def _extract_docx_text(file_buffer):

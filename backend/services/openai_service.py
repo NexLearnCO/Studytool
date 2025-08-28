@@ -1,10 +1,134 @@
 import openai
 from config import Config
+import json
+import re
+from pathlib import Path
 
 class OpenAIService:
     def __init__(self):
         openai.api_key = Config.OPENAI_API_KEY
         self.model = Config.OPENAI_MODEL
+    
+    def run_chat(self, system_message: str, user_message: str, max_tokens: int = 1500, temperature: float = 0.2) -> str:
+        """Generic chat runner to support prompt-templated pipelines."""
+        try:
+            response = openai.ChatCompletion.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": user_message},
+                ],
+                max_tokens=max_tokens,
+                temperature=temperature,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            raise Exception(f"Chat run failed: {str(e)}")
+
+    # --- Prompt templating helpers for Tunnel pipeline ---
+    def _prompts_base(self) -> Path:
+        return Path(__file__).resolve().parents[1] / 'prompts'
+
+    def _load_prompt(self, relative_path: str) -> str:
+        path = self._prompts_base() / relative_path
+        return path.read_text(encoding='utf-8')
+
+    def _render_template(self, text: str, variables: dict) -> str:
+        # Replace {{var}} with provided values; JSON-dump non-strings
+        def repl(match):
+            key = match.group(1).strip()
+            val = variables.get(key, '')
+            if isinstance(val, (dict, list)):
+                return json.dumps(val, ensure_ascii=False)
+            return str(val)
+        return re.sub(r"\{\{\s*([\w_]+)\s*\}\}", repl, text)
+
+    def _run_template(self, relative_path: str, variables: dict, max_tokens: int = 2000, temperature: float = 0.2) -> str:
+        raw = self._load_prompt(relative_path)
+        # Split into System / User blocks
+        lines = raw.splitlines()
+        try:
+            sys_idx = next(i for i, ln in enumerate(lines) if ln.strip() == 'System')
+            usr_idx = next(i for i, ln in enumerate(lines) if ln.strip() == 'User')
+        except StopIteration:
+            # Fallback: all content as user
+            sys_text = ''
+            usr_text = raw
+        else:
+            sys_text = '\n'.join(lines[sys_idx + 1:usr_idx])
+            usr_text = '\n'.join(lines[usr_idx + 1:])
+
+        sys_text = self._render_template(sys_text, variables)
+        usr_text = self._render_template(usr_text, variables)
+        return self.run_chat(sys_text, usr_text, max_tokens=max_tokens, temperature=temperature)
+
+    def run_section_writer(self, variables: dict) -> str:
+        return self._run_template('tasks/section_writer.md', variables, max_tokens=2500, temperature=0.3)
+
+    def parse_json_loose(self, text: str, default=None):
+        try:
+            return json.loads(text)
+        except Exception:
+            pass
+        # Try to extract first JSON array/object
+        m = re.search(r"\{[\s\S]*\}", text)
+        if not m:
+            m = re.search(r"\[[\s\S]*\]", text)
+        if m:
+            try:
+                return json.loads(m.group(0))
+            except Exception:
+                return default
+        return default
+
+    def run_outline_extract(self, chunks_json: list) -> dict:
+        res = self._run_template('tasks/outline_extract.md', {'chunks_json': chunks_json}, max_tokens=1200, temperature=0.2)
+        data = self.parse_json_loose(res, default={})
+        return data or {}
+
+    def run_outline_refine(self, outline_json: dict) -> dict:
+        res = self._run_template('tasks/outline_refine.md', {'outline_json': outline_json}, max_tokens=1200, temperature=0.2)
+        data = self.parse_json_loose(res, default={})
+        return data or {}
+
+    def run_section_router(self, blueprint_json: str, outline_json: dict, chunks_json: list) -> dict:
+        res = self._run_template('tasks/section_router.md', {
+            'blueprint_json': blueprint_json or '',
+            'outline_json': outline_json or {},
+            'chunks_json': chunks_json or []
+        }, max_tokens=1500, temperature=0.2)
+        data = self.parse_json_loose(res, default={})
+        return data or {}
+
+    def run_notes_assemble(self, variables: dict) -> str:
+        # Expected keys: title, exam_system, subject, language, sections_markdown, tags
+        res = self._run_template('tasks/notes_assemble.md', variables, max_tokens=2200, temperature=0.2)
+        return res
+
+    def run_latex_standardize(self, markdown: str) -> str:
+        return self._run_template('tasks/latex_standardize.md', {'markdown': markdown}, max_tokens=1200, temperature=0.0)
+
+    def run_image_captions(self, images_json: list):
+        res = self._run_template('tasks/image_captions.md', {'images_json': images_json}, max_tokens=800, temperature=0.2)
+        data = self.parse_json_loose(res, default=[])
+        return data or []
+
+    def run_table_to_markdown(self, table_raw: str) -> str:
+        return self._run_template('tasks/table_to_markdown.md', {'table_raw': table_raw}, max_tokens=1000, temperature=0.2)
+
+    def run_tags_classify(self, text: str, codebook=None):
+        res = self._run_template('tasks/tags_classify.md', {'text': text, 'codebook': codebook or []}, max_tokens=600, temperature=0.2)
+        data = self.parse_json_loose(res, default={})
+        if isinstance(data, dict):
+            return data.get('tags') or []
+        if isinstance(data, list):
+            return data
+        return []
+
+    def run_citation_guard(self, markdown: str) -> dict:
+        res = self._run_template('tasks/citation_guard.md', {'markdown': markdown}, max_tokens=800, temperature=0.0)
+        data = self.parse_json_loose(res, default={'ok': True, 'notes': []})
+        return data or {'ok': True, 'notes': []}
         
     def generate_notes(self, content, detail_level='medium', language='zh-tw', content_type='general'):
         """Generate notes from content using OpenAI with enhanced prompts and smart content handling"""
