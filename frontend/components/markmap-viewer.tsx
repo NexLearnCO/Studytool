@@ -199,18 +199,11 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
                   const bbox = nodeGroup.getBBox()
                   const cx = bbox.x + bbox.width / 2
                   const cy = bbox.y + bbox.height / 2
-                  const transform: any = (mmRef.current as any).state?.transform
-                  const currentK = transform?.k || 1
-                  // 僅平移，不改變縮放
-                  const translate = { x: -cx * currentK + (svgEl.clientWidth / 2), y: -cy * currentK + (svgEl.clientHeight / 2) }
                   if ((mmRef.current as any).svg && (mmRef.current as any).zoom) {
-                    const d3: any = (window as any).d3
-                    const zoomIdentity = d3?.zoomIdentity
-                    const newTransform = zoomIdentity ? zoomIdentity.translate(translate.x, translate.y).scale(currentK) : { k: currentK, x: translate.x, y: translate.y }
                     ;(mmRef.current as any).svg
                       .transition()
                       .duration(350)
-                      .call((mmRef.current as any).zoom.transform, newTransform)
+                      .call((mmRef.current as any).zoom.translateTo, cx, cy)
                   }
                 } catch (e) {
                   // 忽略移動失敗
