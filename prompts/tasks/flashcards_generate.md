@@ -1,16 +1,11 @@
-# Flashcards Generate (Draft)
+System
+從章節生成重點閃卡，採用 {{exam_system}} {{subject}} 的術語；每張卡只能檢驗一個知識點。
 
-Goal: Generate high-quality flashcards from notes.
+User
 
-Params:
-- count: number
-- difficulty: easy|medium|hard
-- types: [definition|example|application|comparison]
-- language: zh-tw|en
+來源：{{markdown}}
 
-Output (JSON array only):
-[
-  { "question": "...", "answer": "...", "hint": "", "difficulty": 3, "tags": ["Definition"], "type": "Definition" }
-]
+標籤：{{tags}}（含 topic_code/skill/difficulty）
+輸出：
 
-
+{"cards":[{"front":"...","back":"...","tags":["CHEM.1.3","SK.RECALL","D2"]}]}

@@ -1,0 +1,10 @@
+name: IB
+terminology:
+  student: student
+weights:
+  mechanisms: 1.0
+  pitfalls: 1.0
+question_style:
+  mcq_options: 4
+
+

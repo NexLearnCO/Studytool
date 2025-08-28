@@ -1,19 +1,11 @@
-# Quiz Generate (Draft)
+System
+生成題目（MCQ/SA），符合 {{exam_system}} {{subject}} 的出題風格與難度分布；每題附 explain。
 
-Goal: Generate multiple-choice questions with clear explanations.
+User
 
-Params:
-- count: number
-- language: zh-tw|en
+來源：{{markdown}}
 
-Output (JSON array only):
-[
-  {
-    "question": "...",
-    "options": ["A", "B", "C", "D"],
-    "correct": "A",
-    "explanation": "..."
-  }
-]
+題量：{{items}}
 
-
+題型分布：{{question_mix}}
+輸出（JSON）：questions[{type, stem, choices?, answer, explain, tags[]}]

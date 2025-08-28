@@ -1,0 +1,24 @@
+subject: CHEM
+sections:
+  - id: key_concepts
+    title: 核心概念
+    style:
+      bullets: true
+  - id: mechanisms
+    title: 機制/步驟
+    style:
+      ordered_steps: true
+      requires_latex: true
+  - id: examples
+    title: 典型例題
+  - id: pitfalls
+    title: 常見錯誤
+  - id: quick_ref
+    title: 快速參考表
+    style:
+      table_required: true
+style_rules:
+  heading_prefix_emoji: true
+  latex_inline: "$...$"
+
+

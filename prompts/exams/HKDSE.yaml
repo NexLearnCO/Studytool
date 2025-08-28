@@ -1,0 +1,10 @@
+name: HKDSE
+terminology:
+  student: 學生
+weights:
+  mechanisms: 1.2
+  pitfalls: 1.1
+question_style:
+  mcq_options: 4
+
+

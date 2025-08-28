@@ -1,18 +1,13 @@
-# Outline Extract (Draft)
+System
+你是資深教學設計師。請從多來源內容（PDF/PPTX/文本）抽出階層大綱與頁碼對應，不得杜撰。
 
-Goal: Build a clean outline from extracted chunks without adding new facts.
+User
+來源片段（JSON）：{{chunks_json}}
+輸出 JSON 結構：
 
-Inputs:
-- detail_level: brief|medium|detailed
-- language: zh-tw|en
-- chunks: [{kind, text, page, bbox?, url?}]
-
-Constraints:
-- Only reorganize/clean text from chunks; do not invent new content.
-- Preserve original order of headings (#/##/###) as much as possible.
-- Normalize spacing, headings, lists, and tables.
-
-Output:
-- Markdown outline suitable for study notes and mindmap conversion.
-
-
+{
+  "sections":[
+    {"title":"...", "level":1, "doc_id":"...", "pages":[12,13]},
+    {"title":"...", "level":2, "doc_id":"...", "pages":[14], "parent":"..."}
+  ]
+}

@@ -306,25 +306,74 @@ def generate_flashcards_enhanced():
 @app.route('/api/generate-notes', methods=['POST'])
 @app.route('/api/unified-notes', methods=['POST'])
 def unified_notes():
-    """Generate notes from multiple sources (YouTube, PDF, text, webpages)"""
+    """Generate notes from multiple sources (YouTube, PDF, text, webpages).
+    Compatible with both legacy payload and standardized payload.
+    """
     try:
-        data = request.json
-        sources = data.get('sources', {})
+        data = request.json or {}
+
+        # --- Compatibility mapping for keys ---
+        # Standardized keys
         title = data.get('title', '未命名筆記')
-        exam_system = data.get('examSystem', '')
+        exam_system = data.get('exam_system') or data.get('examSystem', '')
         subject = data.get('subject', '')
         topic = data.get('topic', '')
         custom_topic = data.get('customTopic', '')
-        detail_level = data.get('detailLevel', 'medium')
         language = data.get('language', 'zh-tw')
-        
+        mode = data.get('mode', 'hybrid')
+
+        # detail level mapping (standard: brief|normal|deep → legacy: brief|medium|detailed)
+        detail_level_std = data.get('detail_level')
+        if detail_level_std:
+            mapping = {'brief': 'brief', 'normal': 'medium', 'deep': 'detailed'}
+            detail_level = mapping.get(detail_level_std, 'medium')
+        else:
+            detail_level = data.get('detailLevel', 'medium')
+
+        # expansion mapping
+        expansion = data.get('expand_level')
+        if expansion is None:
+            expansion = data.get('expansion', 0)
+
+        # --- Normalize sources ---
+        # Accept both array form and legacy object form
+        sources = data.get('sources', {})
+        normalized = {'youtube': [], 'text': [], 'webpages': [], 'files': []}
+
+        if isinstance(sources, list):
+            for src in sources:
+                if not isinstance(src, dict):
+                    continue
+                stype = (src.get('type') or '').lower()
+                if stype == 'youtube' and src.get('url'):
+                    normalized['youtube'].append(src['url'])
+                elif stype in ('webpage', 'webpages') and src.get('url'):
+                    normalized['webpages'].append(src['url'])
+                elif stype == 'text' and src.get('text'):
+                    normalized['text'].append(src['text'])
+                elif stype == 'pdf':
+                    # Currently we expect uploaded file data in legacy path.
+                    # If only a document_id is provided, we skip for now.
+                    doc_id = src.get('document_id')
+                    if doc_id:
+                        # Placeholder info; extraction handled by ingest pipeline (future)
+                        normalized['files'].append({'name': f'doc:{doc_id}', 'size': 0, 'type': 'application/pdf', 'data': None})
+                else:
+                    # Unknown type; ignore gracefully
+                    pass
+        elif isinstance(sources, dict):
+            # Keep as-is
+            normalized['youtube'] = sources.get('youtube', []) or []
+            normalized['text'] = sources.get('text', []) or []
+            normalized['webpages'] = sources.get('webpages', []) or []
+            normalized['files'] = sources.get('files', []) or []
+
         all_content = []
         source_info = []
-        
+
         # Process YouTube sources
-        youtube_urls = sources.get('youtube', [])
-        for url in youtube_urls:
-            if url.strip():
+        for url in normalized['youtube']:
+            if isinstance(url, str) and url.strip():
                 try:
                     video_info = youtube_service.get_transcript(url)
                     all_content.append(video_info['transcript'])
@@ -335,49 +384,43 @@ def unified_notes():
                     })
                 except Exception as e:
                     print(f"YouTube processing error for {url}: {e}")
-                    continue
-        
-        # Process file sources
-        files = sources.get('files', [])
-        for file_info in files:
+
+        # Process file sources (legacy base64 path)
+        for file_info in normalized['files']:
             try:
-                file_content = pdf_service.extract_text_from_file(file_info)
-                all_content.append(file_content)
-                source_info.append({
-                    'type': 'file',
-                    'name': file_info.get('name', 'unknown'),
-                    'size': file_info.get('size', 0)
-                })
+                # Skip placeholder doc entries without data
+                if file_info and file_info.get('data'):
+                    file_content = pdf_service.extract_text_from_file(file_info)
+                    all_content.append(file_content)
+                    source_info.append({
+                        'type': 'file',
+                        'name': file_info.get('name', 'unknown'),
+                        'size': file_info.get('size', 0)
+                    })
             except Exception as e:
                 print(f"File processing error: {e}")
-                continue
-        
+
         # Process text sources
-        text_contents = sources.get('text', [])
-        for text in text_contents:
-            if text.strip():
+        for text in normalized['text']:
+            if isinstance(text, str) and text.strip():
                 all_content.append(text)
                 source_info.append({
                     'type': 'text',
                     'preview': text[:100] + '...' if len(text) > 100 else text
                 })
-        
+
         # Process webpage sources
-        webpage_urls = sources.get('webpages', [])
-        for url in webpage_urls:
-            if url.strip():
+        for url in normalized['webpages']:
+            if isinstance(url, str) and url.strip():
                 try:
-                    # Simple webpage content extraction (basic implementation)
                     import requests
                     from bs4 import BeautifulSoup
-                    
+
                     response = requests.get(url, timeout=10)
                     soup = BeautifulSoup(response.content, 'html.parser')
-                    
-                    # Extract text from paragraphs
                     paragraphs = soup.find_all('p')
                     webpage_text = ' '.join([p.get_text() for p in paragraphs])
-                    
+
                     if webpage_text:
                         all_content.append(webpage_text)
                         source_info.append({
@@ -387,32 +430,31 @@ def unified_notes():
                         })
                 except Exception as e:
                     print(f"Webpage processing error for {url}: {e}")
-                    continue
-        
+
         if not all_content:
             return jsonify({"error": "No valid content found from sources"}), 400
-        
-        # Combine all content
+
         combined_content = '\n\n'.join(all_content)
-        
-        # Generate unified notes with enhanced context
+
         context_info = {
             'title': title,
             'exam_system': exam_system,
             'subject': subject,
             'topic': topic,
             'custom_topic': custom_topic,
+            'mode': mode,
+            'expansion': expansion,
             'source_count': len(source_info),
             'sources': source_info
         }
-        
+
         notes = openai_service.generate_unified_notes(
             combined_content,
             detail_level,
             language,
             context_info
         )
-        
+
         return jsonify({
             "success": True,
             "notes": notes,
@@ -421,11 +463,13 @@ def unified_notes():
             "subject": subject,
             "topic": topic,
             "custom_topic": custom_topic,
+            "mode": mode,
+            "expansion": expansion,
             "sources": source_info,
             "word_count": len(notes.split()),
             "processing_time": "calculated_on_frontend"
         })
-        
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
