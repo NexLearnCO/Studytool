@@ -405,6 +405,128 @@ POST /api/generate-quiz
 }
 ```
 
+---
+
+## 📥 Ingest 與抽取 API（新）
+
+### 上傳 PDF（登錄態）
+
+```http
+POST /api/v1/ingest/pdf
+```
+
+表單 (multipart/form-data):
+- file: PDF 文件
+- subject?: 科目（可選）
+
+**響應:**
+```json
+{ "ok": true, "data": { "doc_id": 123 } }
+```
+
+### 文件抽取（先行 PyMuPDF，MinerU 後續）
+
+```http
+POST /api/v1/documents/{doc_id}/extract
+```
+
+**響應:**
+```json
+{ "ok": true, "data": { "chunks": [...], "assets": [...] } }
+```
+
+### 檢視抽取結果（除錯）
+
+```http
+GET /api/v1/documents/{doc_id}/chunks
+```
+
+**響應:**
+```json
+{ "ok": true, "data": { "chunks": [...], "assets": [...] } }
+```
+
+---
+
+## 🧩 Artifacts API（保存/載入）
+
+### 創建 artifact
+
+```http
+POST /api/v1/notes/{note_id}/artifacts
+```
+
+**請求體:**
+```json
+{ "kind": "flashcards|quiz|markmap", "data_json": {"...": "..."}, "status": "active" }
+```
+
+**響應:**
+```json
+{ "ok": true, "data": { "id": 1, "kind": "flashcards", "updated_at": 1756... } }
+```
+
+### 列表 artifact（可按 kind 過濾）
+
+```http
+GET /api/v1/notes/{note_id}/artifacts?kind=flashcards
+```
+
+**響應:**
+```json
+{ "ok": true, "data": [{"id":1, "kind":"flashcards", "data_json":{...}}] }
+```
+
+### 讀取/刪除 artifact
+
+```http
+GET /api/v1/artifacts/{id}
+DELETE /api/v1/artifacts/{id}
+```
+
+---
+
+## 🧱 Note Chunks / Embedding（預留）
+
+### 切段
+
+```http
+POST /api/v1/notes/{note_id}/chunk
+```
+
+**響應:**
+```json
+{ "ok": true, "data": { "count": 42 } }
+```
+
+### 生成向量（可延後）
+
+```http
+POST /api/v1/notes/{note_id}/embed
+```
+
+**響應:**
+```json
+{ "ok": true }
+```
+
+---
+
+## 🧰 AI Studio 參數（Modal）
+
+```json
+{
+  "mode": "hybrid|blueprint|outline",
+  "detailLevel": "brief|medium|detailed",
+  "expansion": 0,
+  "language": "zh-tw|en",
+  "examSystem": "HKDSE|IB|SAT",
+  "subject": "BIO|CHEM|PHYS|MATH",
+  "topic": "可選",
+  "sources": { "youtube":[], "text":[], "webpages":[], "files":[] }
+}
+```
+
 **響應示例:**
 ```json
 {
