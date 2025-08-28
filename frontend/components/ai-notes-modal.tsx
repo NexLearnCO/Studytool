@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-// import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -46,8 +46,6 @@ export function AINotesModal({ children }: AINotesModalProps) {
   const [generatedNotes, setGeneratedNotes] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
-  const [step, setStep] = useState<number>(1)
-  const [payloadMode, setPayloadMode] = useState('legacy' as 'legacy' | 'tunnel')
 
   // Form state
   const [title, setTitle] = useState("")
@@ -87,8 +85,6 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setError("")
     setSuccess(false)
     setProgress(0)
-    setStep(1)
-    setPayloadMode('legacy')
   }
 
   const handleGenerate = async () => {
@@ -141,56 +137,21 @@ export function AINotesModal({ children }: AINotesModalProps) {
 
       const processedFiles = await Promise.all(filePromises)
 
-      // Validate required fields in Tunnel mode
-      if (payloadMode === 'tunnel') {
-        if (!examSystem || !subject || !detailLevel || !language || !mode) {
-          setError('請填寫必填欄位（考試制度、科目、詳細程度、語言、模式）')
-          setLoading(false)
-          return
-        }
-      }
-
-      // Build request data
-      const detailLevelStd = detailLevel === 'medium' ? 'normal' : (detailLevel === 'detailed' ? 'deep' : 'brief')
-      let requestData: any
-      if (payloadMode === 'tunnel') {
-        requestData = {
-          title: title || 'AI 生成筆記',
-          exam_system: examSystem,
-          subject: subject,
-          detail_level: detailLevelStd,
-          expand_level: expansion,
-          language: language,
-          mode: mode,
-          // For now keep legacy-style sources object to support file uploads until ingest doc_id is ready
-          sources: {
-            youtube: youtubeUrls.filter(url => url.trim()),
-            text: textInput.trim() ? [textInput.trim()] : [],
-            webpages: webpageUrls.filter(url => url.trim()),
-            files: processedFiles
-          },
-          options: {
-            generate_flashcards: false,
-            generate_quiz: false
-          }
-        }
-      } else {
-        // Legacy payload
-        requestData = {
-          title: title || 'AI 生成筆記',
-          examSystem: examSystem,
-          subject: subject,
-          topic: topic,
-          detailLevel: detailLevel,
-          language: language,
-          mode: mode,
-          expansion: expansion,
-          sources: {
-            youtube: youtubeUrls.filter(url => url.trim()),
-            text: textInput.trim() ? [textInput.trim()] : [],
-            webpages: webpageUrls.filter(url => url.trim()),
-            files: processedFiles
-          }
+      // Build request data to match backend API
+      const requestData = {
+        title: title || "AI 生成筆記",
+        examSystem: examSystem,
+        subject: subject,
+        topic: topic,
+        detailLevel: detailLevel,
+        language: language,
+        mode: mode,
+        expansion: expansion,
+        sources: {
+          youtube: youtubeUrls.filter(url => url.trim()),
+          text: textInput.trim() ? [textInput.trim()] : [],
+          webpages: webpageUrls.filter(url => url.trim()),
+          files: processedFiles
         }
       }
 
@@ -226,7 +187,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
           content_md: result.notes,
           content: result.notes, // Legacy fallback
           language: requestData.language,
-          exam_system: requestData.exam_system || requestData.examSystem,
+          exam_system: requestData.examSystem,
           subject: requestData.subject,
           topic: requestData.topic,
           tags: [] // Could be enhanced with AI-extracted tags
@@ -237,7 +198,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
         }
         
         const newNoteId = createResult.data.id
-        track('NOTE_CREATED', { note_id: newNoteId, language, subject, exam_system: examSystem, payload_mode: payloadMode })
+        track('NOTE_CREATED', { note_id: newNoteId, language, subject, exam_system: examSystem })
         
         // Close modal and redirect to AI result page (preserve the result flow!)
         setOpen(false)
@@ -370,15 +331,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
         )}
 
         <div className="space-y-6">
-          {/* Payload mode toggle */}
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-sm text-slate-600">提交模式：</div>
-            <div className="flex items-center gap-2">
-              <Button variant={payloadMode==='legacy' ? 'default' : 'outline'} size="sm" onClick={()=>setPayloadMode('legacy')} disabled={loading}>Legacy</Button>
-              <Button variant={payloadMode==='tunnel' ? 'default' : 'outline'} size="sm" onClick={()=>setPayloadMode('tunnel')} disabled={loading}>Tunnel</Button>
-            </div>
-          </div>
-
+          {/* Configuration Section */}
           <div className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -496,9 +449,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
                 </div>
               </div>
             </div>
-          </div>
-          
-          <div className="space-y-6">
+
             {/* File Upload - Primary Feature */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold flex items-center gap-2">
@@ -665,12 +616,8 @@ export function AINotesModal({ children }: AINotesModalProps) {
                 </div>
               )}
             </div>
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold">送出</h3>
-              <p className="text-sm text-slate-600">將依序進行：抽取 → 對齊 → 寫稿 → 組稿</p>
-            </div>
 
+            {/* Generate Button */}
             <Button
               onClick={handleGenerate}
               disabled={loading || !hasValidSources()}
