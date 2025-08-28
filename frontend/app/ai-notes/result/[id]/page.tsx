@@ -132,6 +132,38 @@ export default function AIResultPage() {
     loadData()
   }, [id])
 
+  // Auto-load latest saved artifacts into local states on initial load
+  useEffect(() => {
+    if (!savedArtifacts || savedArtifacts.length === 0) return
+
+    // Load flashcards if not already set
+    if (!flashcards) {
+      const latestFlashcards = savedArtifacts.find(a => a.kind === 'flashcards')
+      const cards = (latestFlashcards as any)?.data_json?.cards
+      if (Array.isArray(cards) && cards.length > 0) {
+        setFlashcards(cards)
+      }
+    }
+
+    // Load quiz if not already set
+    if (!quiz) {
+      const latestQuiz = savedArtifacts.find(a => a.kind === 'quiz')
+      const data = (latestQuiz as any)?.data_json
+      if (data) {
+        let questions = data.questions || data || []
+        if (Array.isArray(questions)) {
+          questions = questions.map((q: any) => ({
+            stem: q.stem || q.question || q.text || 'No question',
+            choices: q.choices || q.options || q.answers || [],
+            answer: q.answer || q.correct || 0,
+            explain: q.explain || q.explanation || ''
+          }))
+          setQuiz({ questions })
+        }
+      }
+    }
+  }, [savedArtifacts])
+
   // Generate flashcards
   const handleGenerateFlashcards = async () => {
     if (!note) return
