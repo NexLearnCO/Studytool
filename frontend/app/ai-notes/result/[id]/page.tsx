@@ -74,6 +74,9 @@ export default function AIResultPage() {
   // Generation options
   const [flashcardCount, setFlashcardCount] = useState<number>(10)
   const [quizCount, setQuizCount] = useState<number>(5)
+  const [flashcardDifficulty, setFlashcardDifficulty] = useState<string>("medium")
+  const [flashcardTypes, setFlashcardTypes] = useState<string[]>(["definition", "example"]) 
+  const [showQuizExplanations, setShowQuizExplanations] = useState<boolean>(true)
   const [savingCards, setSavingCards] = useState(false)
   const [savingQuiz, setSavingQuiz] = useState(false)
 
@@ -172,7 +175,11 @@ export default function AIResultPage() {
       setGeneratingCards(true)
       setError("")
       
-      const response = await generateFlashcardsFromNote(id, { count: flashcardCount })
+      const response = await generateFlashcardsFromNote(id, {
+        count: flashcardCount,
+        difficulty: flashcardDifficulty,
+        types: flashcardTypes
+      })
       console.log('Flashcards response:', response)
       
       if (!response.ok) {
@@ -633,6 +640,42 @@ export default function AIResultPage() {
                               ))}
                             </select>
                           </div>
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span>難度</span>
+                            <select
+                              className="h-8 border rounded px-2 text-sm"
+                              value={flashcardDifficulty}
+                              onChange={(e) => setFlashcardDifficulty(e.target.value)}
+                            >
+                              <option value="easy">簡單</option>
+                              <option value="medium">中等</option>
+                              <option value="hard">困難</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <span>類型</span>
+                            <div className="flex gap-2">
+                              {[
+                                { key: "definition", label: "定義" },
+                                { key: "example", label: "例子" },
+                                { key: "application", label: "應用" },
+                                { key: "comparison", label: "比較" }
+                              ].map(t => (
+                                <label key={t.key} className="flex items-center gap-1">
+                                  <input
+                                    type="checkbox"
+                                    className="h-3 w-3"
+                                    checked={flashcardTypes.includes(t.key)}
+                                    onChange={(e) => {
+                                      const checked = e.target.checked
+                                      setFlashcardTypes(prev => checked ? Array.from(new Set([...prev, t.key])) : prev.filter(x => x !== t.key))
+                                    }}
+                                  />
+                                  <span>{t.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -821,14 +864,26 @@ export default function AIResultPage() {
                         <div className="flex gap-2 items-center">
                           <div className="flex items-center gap-2 text-sm text-slate-600">
                             <span>題數</span>
-                            <input
-                              type="number"
-                              min={1}
-                              max={50}
+                            <select
+                              className="h-8 border rounded px-2 text-sm"
                               value={quizCount}
-                              onChange={(e) => setQuizCount(Math.max(1, Math.min(50, Number(e.target.value) || 1)))}
-                              className="w-20 h-8 border rounded px-2 text-sm"
-                            />
+                              onChange={(e) => setQuizCount(Number(e.target.value))}
+                            >
+                              {[5,10,15,20].map(n => (
+                                <option key={n} value={n}>{n}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-slate-600">
+                            <label className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                className="h-3 w-3"
+                                checked={showQuizExplanations}
+                                onChange={(e) => setShowQuizExplanations(e.target.checked)}
+                              />
+                              <span>顯示解析</span>
+                            </label>
                           </div>
                           <Button 
                             variant="outline" 
@@ -921,7 +976,7 @@ export default function AIResultPage() {
                                     </div>
                                   )}
                                   
-                                  {question.explain && (
+                                  {showQuizExplanations && question.explain && (
                                     <div className="text-sm p-3 bg-blue-50 rounded border-l-4 border-blue-200">
                                       <strong className="text-blue-800">解釋：</strong>{question.explain}
                                     </div>
