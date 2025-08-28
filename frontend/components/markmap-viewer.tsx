@@ -144,7 +144,8 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
       }
       
       mmRef.current = Markmap.create(svg, {
-        autoFit: true,
+        // Keep user's viewport when toggling nodes to avoid jumpy recenters
+        autoFit: false,
         fitRatio: 0.95,
         spacingVertical: 16,
         spacingHorizontal: 120,
@@ -154,7 +155,7 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
         // 移除 color 配置，讓 Markmap 使用內建配色邏輯
       }, root)
       
-      // 確保初始化後立即適應容器
+      // 初始時只做一次自適應，之後不自動重置視窗
       setTimeout(() => {
         if (mmRef.current) {
           mmRef.current.fit()
@@ -181,6 +182,44 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
 
       // 添加控制按鈕
       addZoomControls()
+
+      // 為節點點擊/折疊行為綁定視角保護：在展開/折疊後，視角鎖定於點擊的節點附近，避免跳動
+      try {
+        const svgEl = svgRef.current
+        if (svgEl) {
+          svgEl.addEventListener('click', (ev) => {
+            if (!mmRef.current) return
+            const target = ev.target as HTMLElement
+            // 嘗試尋找最近的節點 group
+            const nodeGroup = target.closest('.markmap-node') as SVGGElement | null
+            if (nodeGroup && mmRef.current.svg) {
+              // 在下一個動畫幀，將視角平滑移動至該節點附近（小偏移）
+              requestAnimationFrame(() => {
+                try {
+                  const bbox = nodeGroup.getBBox()
+                  const cx = bbox.x + bbox.width / 2
+                  const cy = bbox.y + bbox.height / 2
+                  const transform: any = (mmRef.current as any).state?.transform
+                  const currentK = transform?.k || 1
+                  // 僅平移，不改變縮放
+                  const translate = { x: -cx * currentK + (svgEl.clientWidth / 2), y: -cy * currentK + (svgEl.clientHeight / 2) }
+                  if ((mmRef.current as any).svg && (mmRef.current as any).zoom) {
+                    const d3: any = (window as any).d3
+                    const zoomIdentity = d3?.zoomIdentity
+                    const newTransform = zoomIdentity ? zoomIdentity.translate(translate.x, translate.y).scale(currentK) : { k: currentK, x: translate.x, y: translate.y }
+                    ;(mmRef.current as any).svg
+                      .transition()
+                      .duration(350)
+                      .call((mmRef.current as any).zoom.transform, newTransform)
+                  }
+                } catch (e) {
+                  // 忽略移動失敗
+                }
+              })
+            }
+          })
+        }
+      } catch { /* ignore */ }
       
       console.log('Markmap initialized successfully with NPM packages')
     } catch (error) {
@@ -196,11 +235,13 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
     }
   }, [])
 
-  // 更新 markdown 內容時重新渲染
+  // 更新 markdown 內容時重新渲染，並儘量保持當前視口
   useEffect(() => {
     if (!mmRef.current || !tfRef.current || !markdown) return
     
     try {
+      // 記錄當前視圖變換矩陣（平移與縮放）
+      const prevTransform: any = (mmRef.current as any)?.state?.transform
       const { root, features } = tfRef.current.transform(markdown)
       
       // 載入新的特性（如果有）
@@ -210,12 +251,21 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
       
       mmRef.current.setData(root)
       
-      // 延遲執行 fit 以確保數據已正確設置
+      // 延遲恢復之前的變換（若存在），避免每次更新都跳回居中
       setTimeout(() => {
-        if (mmRef.current) {
-          mmRef.current.fit()
+        if (mmRef.current && (mmRef.current as any).zoom && (mmRef.current as any).svg) {
+          try {
+            if (prevTransform) {
+              (mmRef.current as any).svg
+                .transition()
+                .duration(0)
+                .call((mmRef.current as any).zoom.transform, prevTransform)
+            }
+          } catch (e) {
+            // 回退：若無法恢復則不處理
+          }
         }
-      }, 200)
+      }, 100)
       
       console.log('Markmap updated with new markdown content')
     } catch (error) {
