@@ -95,6 +95,120 @@ CREATE INDEX idx_notes_deleted ON notes(deleted_at);
 
 ---
 
+## 📦 Artifacts 表
+
+存儲從筆記衍生的學習工具（閃卡、測驗、思維導圖）。
+
+```sql
+CREATE TABLE artifacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id VARCHAR(255) NOT NULL,
+    note_id INTEGER NOT NULL REFERENCES notes(id) ON DELETE CASCADE,
+    kind VARCHAR(50) NOT NULL,              -- 'flashcards' | 'quiz' | 'markmap'
+    data_json TEXT NOT NULL,               -- JSON 字串（cards / questions / mindmap data）
+    status VARCHAR(50) DEFAULT 'draft',    -- 'draft' | 'active'
+    created_at INTEGER NOT NULL,           -- Epoch 毫秒
+    updated_at INTEGER NOT NULL            -- Epoch 毫秒
+);
+
+-- 索引
+CREATE INDEX idx_artifacts_user ON artifacts(user_id);
+CREATE INDEX idx_artifacts_note ON artifacts(note_id);
+CREATE INDEX idx_artifacts_kind ON artifacts(kind);
+CREATE INDEX idx_artifacts_updated ON artifacts(updated_at DESC);
+```
+
+### 字段說明
+
+| 字段 | 類型 | 必需 | 描述 |
+|------|------|------|------|
+| `id` | INTEGER | ✓ | 主鍵，自增 |
+| `user_id` | VARCHAR(255) | ✓ | 用戶 ID |
+| `note_id` | INTEGER | ✓ | 對應的筆記 ID |
+| `kind` | VARCHAR(50) | ✓ | 類型：`flashcards`/`quiz`/`markmap` |
+| `data_json` | TEXT | ✓ | 具體數據（JSON） |
+| `status` | VARCHAR(50) | | 狀態：`draft`/`active` |
+| `created_at` | INTEGER | ✓ | 創建時間 (epoch ms) |
+| `updated_at` | INTEGER | ✓ | 更新時間 (epoch ms) |
+
+---
+
+## 📥 Ingest 與 RAG 表（新）
+
+為多來源上傳、內容抽取、資產管理與後續檢索做準備。
+
+```sql
+-- 原始文件
+CREATE TABLE documents (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id VARCHAR(255) NOT NULL,
+  type VARCHAR(20) NOT NULL,            -- 'pdf'|'pptx'|'docx'|'yt'|'url'|'text'
+  filename VARCHAR(500),
+  subject VARCHAR(100),
+  detected_topic VARCHAR(200),
+  created_at INTEGER NOT NULL
+);
+
+-- 抽取出的片段（文字/表格/公式/圖片）
+CREATE TABLE chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  doc_id INTEGER NOT NULL REFERENCES documents(id),
+  kind VARCHAR(20) NOT NULL,            -- 'text'|'table'|'equation'|'image'
+  text TEXT,
+  page INTEGER,
+  bbox TEXT,                            -- JSON: [x,y,w,h]
+  url TEXT,
+  hash VARCHAR(255),
+  tags TEXT,
+  created_at INTEGER NOT NULL
+);
+
+-- 抽取到的資產（圖片/媒體）
+CREATE TABLE assets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id VARCHAR(255) NOT NULL,
+  note_id INTEGER REFERENCES notes(id),
+  kind VARCHAR(20) NOT NULL,            -- 'image'|'audio'|'video'
+  url TEXT NOT NULL,
+  page INTEGER,
+  ref_chunk_id INTEGER REFERENCES chunks(id),
+  hash VARCHAR(255),
+  created_at INTEGER NOT NULL
+);
+
+-- 筆記與來源文件關聯
+CREATE TABLE notes_sources (
+  note_id INTEGER NOT NULL REFERENCES notes(id),
+  doc_id INTEGER NOT NULL REFERENCES documents(id),
+  PRIMARY KEY (note_id, doc_id)
+);
+
+-- 科目藍本（章節規格）
+CREATE TABLE blueprints (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  exam_system VARCHAR(50) NOT NULL,
+  subject VARCHAR(50) NOT NULL,
+  version VARCHAR(20) NOT NULL,
+  json TEXT NOT NULL
+);
+
+-- 筆記切片（RAG/搜尋用）
+CREATE TABLE note_chunks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  note_id INTEGER NOT NULL REFERENCES notes(id),
+  ord INTEGER NOT NULL,
+  text TEXT NOT NULL,
+  hash VARCHAR(255),
+  embedding TEXT
+);
+
+CREATE INDEX idx_chunks_doc ON chunks(doc_id);
+CREATE INDEX idx_assets_note ON assets(note_id);
+CREATE INDEX idx_note_chunks_note ON note_chunks(note_id, ord);
+```
+
+---
+
 ## 📊 Events 表
 
 事件追蹤表，用於記錄用戶行為和系統事件。

@@ -67,6 +67,9 @@
 
 #### 計劃/進度:
  - [x] 生成選項擴展：閃卡/測驗可自定義數量
+ - [x] AI Studio：保存 artifacts 並自動載入（flashcards/quiz/markmap）
+ - [x] 思維導圖 UX 優化：保持視口、移除點擊跳動
+ - [x] 語言對齊：生成語言跟隨 note
  - [ ] 閃卡庫存系統：管理、分組、進度追蹤
  - [ ] FSRS 演算法整合
 - [ ] 用戶認證系統
@@ -326,7 +329,7 @@
 
 ### 技術選擇:
 - **後端**: Flask - 輕量級，快速開發
-- **前端**: 原生JS - 簡單直接，易於調試
+- **前端**: Next.js + React 19 + TypeScript
 - **AI服務**: OpenAI - 成熟穩定的API
 - **思維導圖**: Markmap - 優秀的可視化
 
@@ -338,7 +341,7 @@
 
 ### 未來考慮:
 - 微服務架構遷移
-- React/Vue前端重構
+- RAG + Ingest 管線（documents/chunks/assets/blueprints/note_chunks）
 - Docker容器化
 - Kubernetes部署
 
