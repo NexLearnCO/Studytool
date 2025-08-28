@@ -65,6 +65,9 @@ export function AINotesModal({ children }: AINotesModalProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [activeSourceTab, setActiveSourceTab] = useState<string | null>(null)
 
+  // Tracking
+  const { track } = require("@/src/lib/track")
+
   const resetForm = () => {
     setTitle("")
     setExamSystem("")
@@ -88,6 +91,32 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setLoading(true)
     setError("")
     setProgress(0)
+
+    // Basic validations
+    const MAX_FILES = 8
+    const MAX_FILE_MB = 12
+    if (selectedFiles.length > MAX_FILES) {
+      setError(`一次最多上傳 ${MAX_FILES} 個檔案`)
+      setLoading(false)
+      return
+    }
+    for (const f of selectedFiles) {
+      if (f.size > MAX_FILE_MB * 1024 * 1024) {
+        setError(`檔案 ${f.name} 超過 ${MAX_FILE_MB}MB 限制`)
+        setLoading(false)
+        return
+      }
+    }
+
+    track('NOTES_GENERATION_STARTED', {
+      sources: {
+        youtube: youtubeUrls.filter(u => u.trim()).length,
+        text: textInput.trim() ? 1 : 0,
+        webpages: webpageUrls.filter(u => u.trim()).length,
+        files: selectedFiles.length
+      },
+      mode, detailLevel, expansion, language
+    })
 
     try {
       // Convert files to base64 for transmission
@@ -169,6 +198,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
         }
         
         const newNoteId = createResult.data.id
+        track('NOTE_CREATED', { note_id: newNoteId, language, subject, exam_system: examSystem })
         
         // Close modal and redirect to AI result page (preserve the result flow!)
         setOpen(false)
@@ -180,6 +210,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
     } catch (err) {
       console.error('生成筆記錯誤:', err)
       setError(err instanceof Error ? err.message : "生成筆記時發生錯誤，請稍後再試")
+      track('NOTES_GENERATION_FAILED', { message: err instanceof Error ? err.message : String(err) })
     } finally {
       setLoading(false)
     }
