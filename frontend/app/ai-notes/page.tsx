@@ -41,6 +41,8 @@ export default function AINotesPage() {
   const [topic, setTopic] = useState("")
   const [detailLevel, setDetailLevel] = useState("medium")
   const [language, setLanguage] = useState("zh-tw")
+  const [mode, setMode] = useState("hybrid") // hybrid | blueprint | outline
+  const [expansion, setExpansion] = useState(0) // 0..3
   
   // Sources
   const [youtubeUrls, setYoutubeUrls] = useState([""])
@@ -48,53 +50,65 @@ export default function AINotesPage() {
   const [webpageUrls, setWebpageUrls] = useState([""])
   const [files, setFiles] = useState<File[]>([])
 
+  const removeFileAt = (idx: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const readFilesAsDataUrls = (fileList: File[]): Promise<Array<{ name: string; size: number; type: string; data: string }>> => {
+    return Promise.all(fileList.map(file => new Promise<{ name: string; size: number; type: string; data: string }>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve({ name: file.name, size: file.size, type: file.type || "application/octet-stream", data: String(reader.result) })
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })))
+  }
+
   const handleGenerate = async () => {
     setLoading(true)
     setError("")
     setProgress(0)
-
-    // Simulate API call with progress
     try {
-      for (let i = 0; i <= 100; i += 10) {
-        setProgress(i)
-        await new Promise(resolve => setTimeout(resolve, 200))
+      setProgress(10)
+      const filePayload = await readFilesAsDataUrls(files)
+      setProgress(20)
+
+      const payload = {
+        title: title || "AI 筆記",
+        examSystem: examSystem,
+        subject: subject,
+        topic: topic,
+        detailLevel: detailLevel,
+        language: language,
+        mode: mode,
+        expansion: expansion,
+        sources: {
+          youtube: youtubeUrls.filter(u => u && u.trim()),
+          text: textInput.trim() ? [textInput] : [],
+          webpages: webpageUrls.filter(u => u && u.trim()),
+          files: filePayload
+        }
       }
 
-      // Mock API response
-      const mockNotes = `# ${title || "AI 生成筆記"}
-
-## 概述
-這是由 AI 自動生成的學習筆記，基於您提供的資源內容。
-
-## 主要知識點
-
-### 1. 核心概念
-- 重要概念 A: 詳細解釋...
-- 重要概念 B: 詳細解釋...
-- 重要概念 C: 詳細解釋...
-
-### 2. 實際應用
-- 應用場景 1
-- 應用場景 2
-- 應用場景 3
-
-### 3. 常見問題
-- 問題：這個概念如何應用？
-  - 答案：詳細解答...
-
-## 總結
-重點內容的總結和要點回顧。
-
-## 建議延伸學習
-- 相關主題 A
-- 相關主題 B
-- 推薦資源
-`
-
-      setGeneratedNotes(mockNotes)
+      setProgress(40)
+      const res = await fetch("http://localhost:5000/api/unified-notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      })
+      setProgress(70)
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "")
+        throw new Error(txt || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
+      setProgress(90)
+      const md = data?.notes || ""
+      if (!md) throw new Error("後端未返回筆記內容")
+      setGeneratedNotes(md)
       setSuccess(true)
-    } catch (err) {
-      setError("生成筆記時發生錯誤，請稍後再試")
+      setProgress(100)
+    } catch (err: any) {
+      setError(err?.message || "生成筆記時發生錯誤，請稍後再試")
     } finally {
       setLoading(false)
     }
@@ -110,6 +124,10 @@ export default function AINotesPage() {
     setYoutubeUrls(newUrls)
   }
 
+  const removeYoutubeUrl = (index: number) => {
+    setYoutubeUrls(urls => urls.filter((_, i) => i !== index))
+  }
+
   const addWebpageUrl = () => {
     setWebpageUrls([...webpageUrls, ""])
   }
@@ -118,6 +136,10 @@ export default function AINotesPage() {
     const newUrls = [...webpageUrls]
     newUrls[index] = value
     setWebpageUrls(newUrls)
+  }
+
+  const removeWebpageUrl = (index: number) => {
+    setWebpageUrls(urls => urls.filter((_, i) => i !== index))
   }
 
   const hasValidSources = () => {
@@ -247,6 +269,35 @@ export default function AINotesPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="mode">生成模式</Label>
+                  <Select value={mode} onValueChange={setMode}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hybrid">Hybrid（預設）</SelectItem>
+                      <SelectItem value="blueprint">Blueprint-only</SelectItem>
+                      <SelectItem value="outline">Outline-only</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="expansion">擴充程度</Label>
+                  <Select value={String(expansion)} onValueChange={(v) => setExpansion(parseInt(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0 - 僅整理（不新增）</SelectItem>
+                      <SelectItem value="1">1 - 可補缺漏（需來源）</SelectItem>
+                      <SelectItem value="2">2 - 背景補充（標記補充）</SelectItem>
+                      <SelectItem value="3">3 - 限課綱內擴展</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
 
@@ -279,12 +330,14 @@ export default function AINotesPage() {
 
                   <TabsContent value="youtube" className="space-y-3">
                     {youtubeUrls.map((url, index) => (
-                      <Input
-                        key={index}
-                        value={url}
-                        onChange={(e) => updateYoutubeUrl(index, e.target.value)}
-                        placeholder="https://www.youtube.com/watch?v=..."
-                      />
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          value={url}
+                          onChange={(e) => updateYoutubeUrl(index, e.target.value)}
+                          placeholder="https://www.youtube.com/watch?v=..."
+                        />
+                        <Button variant="outline" size="sm" onClick={() => removeYoutubeUrl(index)}>刪除</Button>
+                      </div>
                     ))}
                     <Button variant="outline" size="sm" onClick={addYoutubeUrl}>
                       新增 YouTube 連結
@@ -302,12 +355,14 @@ export default function AINotesPage() {
 
                   <TabsContent value="webpage" className="space-y-3">
                     {webpageUrls.map((url, index) => (
-                      <Input
-                        key={index}
-                        value={url}
-                        onChange={(e) => updateWebpageUrl(index, e.target.value)}
-                        placeholder="https://example.com/article"
-                      />
+                      <div key={index} className="flex gap-2">
+                        <Input
+                          value={url}
+                          onChange={(e) => updateWebpageUrl(index, e.target.value)}
+                          placeholder="https://example.com/article"
+                        />
+                        <Button variant="outline" size="sm" onClick={() => removeWebpageUrl(index)}>刪除</Button>
+                      </div>
                     ))}
                     <Button variant="outline" size="sm" onClick={addWebpageUrl}>
                       新增網頁連結
@@ -318,9 +373,29 @@ export default function AINotesPage() {
                     <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center">
                       <Upload className="h-8 w-8 mx-auto text-slate-400 mb-2" />
                       <p className="text-sm text-slate-600 mb-2">拖放檔案或點擊上傳</p>
-                      <Button variant="outline" size="sm">選擇檔案</Button>
+                      <input
+                        type="file"
+                        multiple
+                        className="hidden"
+                        id="ai-notes-file-input"
+                        onChange={(e) => {
+                          const list = e.target.files ? Array.from(e.target.files) : []
+                          setFiles(prev => [...prev, ...list])
+                        }}
+                      />
+                      <Button variant="outline" size="sm" onClick={() => document.getElementById("ai-notes-file-input")?.click()}>選擇檔案</Button>
                       <p className="text-xs text-slate-500 mt-2">支援 PDF、DOC、TXT 格式</p>
                     </div>
+                    {files.length > 0 && (
+                      <div className="mt-4 text-left space-y-2">
+                        {files.map((f, i) => (
+                          <div key={i} className="flex items-center justify-between border rounded p-2 text-sm">
+                            <span className="truncate mr-2">{f.name} <span className="text-slate-400">({Math.round(f.size/1024)} KB)</span></span>
+                            <Button variant="outline" size="sm" onClick={() => removeFileAt(i)}>移除</Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </TabsContent>
                 </Tabs>
               </CardContent>
