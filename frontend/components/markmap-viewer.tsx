@@ -183,36 +183,7 @@ export default function MarkmapViewer({ markdown, className = '' }: MarkmapViewe
       // 添加控制按鈕
       addZoomControls()
 
-      // 為節點點擊/折疊行為綁定視角保護：在展開/折疊後，視角鎖定於點擊的節點附近，避免跳動
-      try {
-        const svgEl = svgRef.current
-        if (svgEl) {
-          svgEl.addEventListener('click', (ev) => {
-            if (!mmRef.current) return
-            const target = ev.target as HTMLElement
-            // 嘗試尋找最近的節點 group
-            const nodeGroup = target.closest('.markmap-node') as SVGGElement | null
-            if (nodeGroup && mmRef.current.svg) {
-              // 在下一個動畫幀，將視角平滑移動至該節點附近（小偏移）
-              requestAnimationFrame(() => {
-                try {
-                  const bbox = nodeGroup.getBBox()
-                  const cx = bbox.x + bbox.width / 2
-                  const cy = bbox.y + bbox.height / 2
-                  if ((mmRef.current as any).svg && (mmRef.current as any).zoom) {
-                    ;(mmRef.current as any).svg
-                      .transition()
-                      .duration(350)
-                      .call((mmRef.current as any).zoom.translateTo, cx, cy)
-                  }
-                } catch (e) {
-                  // 忽略移動失敗
-                }
-              })
-            }
-          })
-        }
-      } catch { /* ignore */ }
+      // 取消點擊自動置中，避免折疊時視角漂移
       
       console.log('Markmap initialized successfully with NPM packages')
     } catch (error) {
