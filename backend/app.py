@@ -764,14 +764,28 @@ def unified_notes():
                         emit('CITATION_ISSUES', {'count': len(qa.get('issues') or [])})
                 except Exception:
                     pass
+                # Ensure images are in final markdown as a gallery fallback
+                try:
+                    if 'file_chunks' in context_info and any((ch.get('kind') == 'image' and ch.get('url')) for ch in context_info['file_chunks']):
+                        imgs = [ch for ch in context_info['file_chunks'] if ch.get('kind') == 'image' and ch.get('url')]
+                        gallery_lines = []
+                        for idx, img in enumerate(imgs, 1):
+                            url = img.get('url')
+                            page = img.get('page') or '?'
+                            caption = f"圖 P{page}-{idx}"
+                            gallery_lines.append(f"![{caption}]({url})")
+                        if gallery_lines:
+                            notes += "\n\n### 圖片\n" + "\n".join(gallery_lines) + "\n"
+                except Exception:
+                    pass
             except Exception as e:
                 print(f"notes assemble failed: {e}")
-        notes = openai_service.generate_unified_notes(
-            combined_content,
-            detail_level,
-            language,
+                notes = openai_service.generate_unified_notes(
+                    combined_content,
+                    detail_level,
+                    language,
                     {**context_info, 'pipeline': 'hybrid-fallback'}
-        )
+                )
         try:
             emit('PIPELINE_END', {'mode': mode, 'words': len(notes.split())})
         except Exception:
