@@ -53,6 +53,8 @@ import {
 import { track } from "@/src/lib/track"
 import MarkmapViewer from "@/components/markmap-viewer"
 import SimpleBlockNoteUnified from "@/components/simple-blocknote-unified"
+import PreviewMode from "@/components/preview-mode"
+import { normalizeMarkdown } from "@/src/lib/markdown/normalize"
 
 export default function AIResultPage() {
   const { id } = useParams<{ id: string }>()
@@ -94,6 +96,9 @@ export default function AIResultPage() {
 
   // Tab management
   const currentView = (searchParams.get("view") ?? "note") as "note"|"mindmap"|"flashcards"|"quiz"
+  
+  // Reading mode state
+  const [isReadingMode, setIsReadingMode] = useState(false)
   
   const setView = (v: string) => {
     router.replace(`/ai-notes/result/${id}?view=${v}`, { scroll: false })
@@ -568,21 +573,43 @@ export default function AIResultPage() {
                 <TabsContent value="note" className="p-0 m-0">
                   <div className="bg-white">
                     <div className="p-4 border-b">
-                      <h3 className="font-medium text-lg flex items-center gap-2">
-                        <FileText className="h-5 w-5 text-slate-700" />
-                        筆記內容
-                      </h3>
-                      <p className="text-sm text-gray-500 mt-1">
-                        您可以在這裡預覽筆記內容
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium text-lg flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-slate-700" />
+                            筆記內容
+                          </h3>
+                          <p className="text-sm text-gray-500 mt-1">
+                            您可以在這裡預覽筆記內容
+                          </p>
+                        </div>
+                        <Button
+                          variant={isReadingMode ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setIsReadingMode(!isReadingMode)}
+                          className="flex items-center gap-2"
+                        >
+                          <Eye className="h-4 w-4" />
+                          {isReadingMode ? "編輯模式" : "閱讀模式"}
+                        </Button>
+                      </div>
                     </div>
                     <div className="p-0">
                       <div className="min-h-[700px]">
-                        <SimpleBlockNoteUnified 
-                          initialMarkdown={markdown}
-                          editable={false}
-                          className="h-full"
-                        />
+                        {isReadingMode ? (
+                          <div className="p-6">
+                            <PreviewMode 
+                              markdown={normalizeMarkdown(markdown, process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:5000")}
+                              className="max-w-none"
+                            />
+                          </div>
+                        ) : (
+                          <SimpleBlockNoteUnified 
+                            initialMarkdown={markdown}
+                            editable={false}
+                            className="h-full"
+                          />
+                        )}
                       </div>
                     </div>
                   </div>

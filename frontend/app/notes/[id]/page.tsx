@@ -103,28 +103,38 @@ export default function NoteEditorPage() {
     }
   }, [noteId])
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeout) {
+        clearTimeout(saveTimeout)
+      }
+    }
+  }, [saveTimeout])
+
   // Debounced save function
   const debouncedSave = useCallback((updates: Partial<Note>) => {
-    if (saveTimeout) {
-      clearTimeout(saveTimeout)
-    }
-
-    const timeout = setTimeout(async () => {
-      try {
-        setSaving(true)
-        await updateNote(noteId, updates)
-        setSuccess(true)
-        setTimeout(() => setSuccess(false), 2000)
-      } catch (err) {
-        console.error('Autosave failed:', err)
-        setError("自動保存失敗")
-      } finally {
-        setSaving(false)
+    setSaveTimeout(prev => {
+      if (prev) {
+        clearTimeout(prev)
       }
-    }, 500)
-
-    setSaveTimeout(timeout)
-  }, [noteId, saveTimeout])
+      
+      return setTimeout(async () => {
+        try {
+          setSaving(true)
+          console.log('Auto-saving note:', noteId, updates)
+          await updateNote(noteId, updates)
+          setSuccess(true)
+          setTimeout(() => setSuccess(false), 2000)
+        } catch (err) {
+          console.error('Autosave failed:', err)
+          setError("自動保存失敗")
+        } finally {
+          setSaving(false)
+        }
+      }, 500)
+    })
+  }, [noteId])
 
   // Handle title change
   const handleTitleChange = (newTitle: string) => {
@@ -133,13 +143,19 @@ export default function NoteEditorPage() {
   }
 
   // Handle content change from BlockNote
-  const handleContentChange = (markdown: string) => {
+  const handleContentChange = useCallback((markdown: string) => {
+    console.log('Content changed:', markdown.substring(0, 100) + '...')
     setContent(markdown)
     // Save both markdown and track content_json would be available from BlockNote
     debouncedSave({ 
       content_md: markdown,
       content: markdown // Legacy fallback
     })
+  }, [debouncedSave])
+
+  // Handle preview mode toggle
+  const handlePreviewToggle = () => {
+    setShowPreview(!showPreview)
   }
 
   // Manual save
@@ -250,7 +266,7 @@ export default function NoteEditorPage() {
           )}
         </div>
 
-        <Button variant="outline" onClick={() => setShowPreview(!showPreview)}>
+        <Button variant="outline" onClick={handlePreviewToggle}>
           <Eye className="mr-2 h-4 w-4" />
           {showPreview ? '隱藏' : '預覽'}導圖
         </Button>
@@ -313,8 +329,8 @@ export default function NoteEditorPage() {
               </CardHeader>
               <CardContent className="h-[calc(100%-4rem)] overflow-auto p-4">
                 <SimpleBlockNoteUnified
-                  key={noteId} 
-                  initialMarkdown={initialContentRef.current}
+                  key={`${noteId}-preview-${showPreview}`} 
+                  initialMarkdown={content}
                   onChange={handleContentChange}
                   className="h-full"
                 />
