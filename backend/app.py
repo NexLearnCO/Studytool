@@ -369,11 +369,23 @@ def unified_notes():
             normalized['text'] = sources.get('text', []) or []
             normalized['webpages'] = sources.get('webpages', []) or []
             normalized['files'] = sources.get('files', []) or []
-
+        
         all_content = []
         source_info = []
         chunk_meta = []  # collect per-source metadata for improved chunks
-
+        # Initialize context_info early so file processing can attach file_chunks
+        context_info = {
+            'title': title,
+            'exam_system': exam_system,
+            'subject': subject,
+            'topic': topic,
+            'custom_topic': custom_topic,
+            'mode': mode,
+            'expansion': expansion,
+            'source_count': 0,
+            'sources': []
+        }
+        
         # Process YouTube sources
         for url in normalized['youtube']:
             if isinstance(url, str) and url.strip():
@@ -414,17 +426,17 @@ def unified_notes():
                         except Exception as e:
                             print(f"PyMuPDF chunking error: {e}")
                     # Fallback to plain text extraction
-                    file_content = pdf_service.extract_text_from_file(file_info)
-                    all_content.append(file_content)
-                    source_info.append({
-                        'type': 'file',
-                        'name': file_info.get('name', 'unknown'),
-                        'size': file_info.get('size', 0)
-                    })
-                    chunk_meta.append({'doc_id': f'file:{file_info.get("name","unknown")}'})
+                file_content = pdf_service.extract_text_from_file(file_info)
+                all_content.append(file_content)
+                source_info.append({
+                    'type': 'file',
+                    'name': file_info.get('name', 'unknown'),
+                    'size': file_info.get('size', 0)
+                })
+                chunk_meta.append({'doc_id': f'file:{file_info.get("name","unknown")}'})
             except Exception as e:
                 print(f"File processing error: {e}")
-
+        
         # Process text sources
         for text in normalized['text']:
             if isinstance(text, str) and text.strip():
@@ -434,19 +446,19 @@ def unified_notes():
                     'preview': text[:100] + '...' if len(text) > 100 else text
                 })
                 chunk_meta.append({'doc_id': 'text:input'})
-
+        
         # Process webpage sources
         for url in normalized['webpages']:
             if isinstance(url, str) and url.strip():
                 try:
                     import requests
                     from bs4 import BeautifulSoup
-
+                    
                     response = requests.get(url, timeout=10)
                     soup = BeautifulSoup(response.content, 'html.parser')
                     paragraphs = soup.find_all('p')
                     webpage_text = ' '.join([p.get_text() for p in paragraphs])
-
+                    
                     if webpage_text:
                         all_content.append(webpage_text)
                         source_info.append({
@@ -457,12 +469,12 @@ def unified_notes():
                         chunk_meta.append({'doc_id': f'web:{url}'})
                 except Exception as e:
                     print(f"Webpage processing error for {url}: {e}")
-
+        
         if not all_content:
             return jsonify({"error": "No valid content found from sources"}), 400
-
+        
         combined_content = '\n\n'.join(all_content)
-
+        
         # Build naive chunks with IDs for routing and section writing
         raw_parts = [p.strip() for p in combined_content.split('\n\n') if p.strip()]
         # assign doc_id per block roughly by distributing meta indices
@@ -473,21 +485,13 @@ def unified_notes():
         chunks = [{'id': f'c{i}', 'kind': 'text', 'text': part, **meta_for(i)} for i, part in enumerate(raw_parts[:80])]  # cap size
 
         # Initialize context_info early and keep enriching it; do not overwrite later
-        context_info = {
-            'title': title,
-            'exam_system': exam_system,
-            'subject': subject,
-            'topic': topic,
-            'custom_topic': custom_topic,
-            'mode': mode,
-            'expansion': expansion,
-            'source_count': len(source_info),
-            'sources': source_info
-        }
+        # Update counts after sources processed
+        context_info['source_count'] = len(source_info)
+        context_info['sources'] = source_info
 
         # Attach blueprint/exam files if available for tunnel path (prompts/ at repo root)
         try:
-            base_dir = pathlib.Path(__file__).resolve().parents[1].parent
+            base_dir = pathlib.Path(__file__).resolve().parents[1]
             if subject:
                 bp_path = base_dir / 'prompts' / 'blueprints' / f"{str(subject).upper()}.yaml"
                 if bp_path.exists():
@@ -538,9 +542,9 @@ def unified_notes():
 
             try:
                 notes = openai_service.run_notes_assemble({
-                    'title': title,
-                    'exam_system': exam_system,
-                    'subject': subject,
+            'title': title,
+            'exam_system': exam_system,
+            'subject': subject,
                     'language': language,
                     'sections_markdown': sections_markdown or [{'id': 'all', 'title': context_info.get('title'), 'order': 1, 'markdown': combined_content}],
                     'tags': []
@@ -749,17 +753,17 @@ def unified_notes():
                     pass
             except Exception as e:
                 print(f"notes assemble failed: {e}")
-                notes = openai_service.generate_unified_notes(
-                    combined_content,
-                    detail_level,
-                    language,
+        notes = openai_service.generate_unified_notes(
+            combined_content,
+            detail_level,
+            language,
                     {**context_info, 'pipeline': 'hybrid-fallback'}
-                )
+        )
         try:
             emit('PIPELINE_END', {'mode': mode, 'words': len(notes.split())})
         except Exception:
             pass
-
+        
         return jsonify({
             "success": True,
             "notes": notes,
@@ -774,7 +778,7 @@ def unified_notes():
             "word_count": len(notes.split()),
             "processing_time": "calculated_on_frontend"
         })
-
+        
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
