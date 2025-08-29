@@ -601,10 +601,13 @@ def unified_notes():
                 outline = {}
 
             try:
+                # Prefer file_chunks when available to enable precise chunk_ids with doc_id/page
+                router_input_chunks = context_info.get('file_chunks') or chunks
                 mapping = openai_service.run_section_router(
                     context_info.get('blueprint', ''),
                     outline or {},
-                    chunks
+                    router_input_chunks,
+                    language
                 )
                 emit('ROUTER_DONE', {'mapped': bool(mapping)})
             except Exception as e:
@@ -624,8 +627,12 @@ def unified_notes():
                         'chunk_ids': []
                     }]
 
-                # Build id->chunk map
+                # Build id->chunk map from both naive chunks and file_chunks (when present)
                 id_to_chunk = {c['id']: c for c in chunks if isinstance(c, dict) and 'id' in c}
+                if 'file_chunks' in context_info:
+                    for c in context_info['file_chunks']:
+                        if isinstance(c, dict) and c.get('id'):
+                            id_to_chunk[c['id']] = c
 
                 for m in mappings[:10]:  # cap
                     variables = {

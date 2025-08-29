@@ -91,11 +91,12 @@ class OpenAIService:
         data = self.parse_json_loose(res, default={})
         return data or {}
 
-    def run_section_router(self, blueprint_json: str, outline_json: dict, chunks_json: list) -> dict:
+    def run_section_router(self, blueprint_json: str, outline_json: dict, chunks_json: list, language: str = None) -> dict:
         res = self._run_template('tasks/section_router.md', {
             'blueprint_json': blueprint_json or '',
             'outline_json': outline_json or {},
-            'chunks_json': chunks_json or []
+            'chunks_json': chunks_json or [],
+            'language': language or ''
         }, max_tokens=1500, temperature=0.2)
         data = self.parse_json_loose(res, default={})
         return data or {}
