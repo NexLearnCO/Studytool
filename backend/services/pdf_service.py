@@ -9,6 +9,8 @@ from io import BytesIO
 import base64
 import mimetypes
 import os
+import hashlib
+import re
 
 # Import for DOCX/PPTX support
 try:
@@ -115,6 +117,14 @@ class PDFService:
         doc = fitz.open(stream=file_bytes, filetype='pdf')
         chunks = []
         doc_id = f'file:{file_name}'
+        # Derive a filesystem-safe folder name for assets
+        safe_doc_folder = re.sub(r'[^A-Za-z0-9._-]+', '_', os.path.splitext(os.path.basename(file_name))[0] or 'doc')
+        assets_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'static', 'assets', safe_doc_folder))
+        try:
+            os.makedirs(assets_root, exist_ok=True)
+        except Exception:
+            # If we fail to create directory, we will still return inline placeholders
+            assets_root = None
         chunk_idx = 0
         for page_index, page in enumerate(doc, 1):
             # Text blocks
@@ -139,7 +149,39 @@ class PDFService:
                 xref = img[0]
                 try:
                     pix = fitz.Pixmap(doc, xref)
-                    # We won't persist file; caller can decide storage. Put a placeholder url.
+                    # Convert to RGB if needed (e.g., CMYK) for PNG export
+                    if pix.n > 4:
+                        pix_converted = fitz.Pixmap(fitz.csRGB, pix)
+                        pix = pix_converted
+                    image_bytes = pix.tobytes("png")
+                    # Compute stable asset id by hash (dedupe)
+                    asset_hash = hashlib.sha256(image_bytes).hexdigest()
+                    asset_id = asset_hash[:32]
+                    file_name_png = f"{asset_id}.png"
+                    url = f"/static/assets/{safe_doc_folder}/{file_name_png}"
+                    # Persist if we can
+                    if assets_root:
+                        try:
+                            file_path = os.path.join(assets_root, file_name_png)
+                            if not os.path.exists(file_path):
+                                with open(file_path, 'wb') as f:
+                                    f.write(image_bytes)
+                        except Exception:
+                            # Fallback to inline placeholder if write fails
+                            url = f'inline:image:{doc_id}:{page_index}:{xref}'
+                    chunks.append({
+                        'id': f'{doc_id}-p{page_index}-img{xref}',
+                        'kind': 'image',
+                        'doc_id': doc_id,
+                        'page': page_index,
+                        'bbox': None,
+                        'asset_id': asset_id,
+                        'url': url,
+                        'width': pix.width,
+                        'height': pix.height
+                    })
+                except Exception:
+                    # On failure, keep previous behavior with inline placeholder
                     chunks.append({
                         'id': f'{doc_id}-p{page_index}-img{xref}',
                         'kind': 'image',
@@ -148,8 +190,6 @@ class PDFService:
                         'bbox': None,
                         'url': f'inline:image:{doc_id}:{page_index}:{xref}'
                     })
-                except Exception:
-                    continue
         return chunks
     
     @staticmethod
