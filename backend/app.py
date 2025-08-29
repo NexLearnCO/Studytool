@@ -637,9 +637,33 @@ def unified_notes():
                         'section_name': m.get('blueprint_section') or context_info.get('topic') or context_info.get('title'),
                         'blueprint_json': context_info.get('blueprint', ''),
                         'exam_patch': context_info.get('exam_patch', ''),
-                        'chunks_json': [id_to_chunk[cid] for cid in (m.get('chunk_ids') or []) if cid in id_to_chunk] or chunks,
+                        'chunks_json': [id_to_chunk[cid] for cid in (m.get('chunk_ids') or []) if cid in id_to_chunk] or [],
                         'style_rules': '',
                     }
+                    # If router沒有回 chunk_ids，做簡易關鍵詞匹配選塊（根據 section_name/source_titles）
+                    if not variables['chunks_json']:
+                        try:
+                            target_terms = set()
+                            sec_name = variables['section_name'] or ''
+                            for t in (sec_name.split()):
+                                target_terms.add(t.lower())
+                            for t in (m.get('source_titles') or []):
+                                for w in str(t).split():
+                                    target_terms.add(w.lower())
+                            # 簡易分數：包含關鍵詞數量
+                            scored = []
+                            for c in chunks:
+                                txt = (c.get('text') or '').lower()
+                                if not txt:
+                                    continue
+                                score = sum(1 for w in target_terms if w and w in txt)
+                                if score > 0:
+                                    scored.append((score, c))
+                            scored.sort(key=lambda x: x[0], reverse=True)
+                            picked = [c for _, c in scored[:8]] or chunks[:6]
+                            variables['chunks_json'] = picked
+                        except Exception:
+                            variables['chunks_json'] = chunks
                     try:
                         sec_md = openai_service.run_section_writer(variables)
                         # Post-process: LaTeX standardize

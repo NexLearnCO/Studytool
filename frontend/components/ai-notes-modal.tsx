@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -46,6 +47,9 @@ export function AINotesModal({ children }: AINotesModalProps) {
   const [generatedNotes, setGeneratedNotes] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [payloadMode, setPayloadMode] = useState<'legacy' | 'tunnel'>('legacy')
+  const [autoFlashcards, setAutoFlashcards] = useState(false)
+  const [autoQuiz, setAutoQuiz] = useState(false)
 
   // Form state
   const [title, setTitle] = useState("")
@@ -85,6 +89,9 @@ export function AINotesModal({ children }: AINotesModalProps) {
     setError("")
     setSuccess(false)
     setProgress(0)
+    setPayloadMode('legacy')
+    setAutoFlashcards(false)
+    setAutoQuiz(false)
   }
 
   const handleGenerate = async () => {
@@ -137,8 +144,36 @@ export function AINotesModal({ children }: AINotesModalProps) {
 
       const processedFiles = await Promise.all(filePromises)
 
-      // Build request data to match backend API
-      const requestData = {
+      // Validate required fields for Tunnel mode
+      if (payloadMode === 'tunnel') {
+        if (!examSystem || !subject || !detailLevel || !language || !mode) {
+          setError('請填寫必填欄位（考試制度、科目、詳細程度、語言、模式）')
+          setLoading(false)
+          return
+        }
+      }
+
+      // Build request data (Tunnel standardized vs Legacy)
+      const detailLevelStd = detailLevel === 'medium' ? 'normal' : (detailLevel === 'detailed' ? 'deep' : 'brief')
+      const requestData: any = payloadMode === 'tunnel' ? {
+        title: title || 'AI 生成筆記',
+        exam_system: examSystem,
+        subject: subject,
+        detail_level: detailLevelStd,
+        expand_level: expansion,
+        language: language,
+        mode: mode,
+        sources: {
+          youtube: youtubeUrls.filter(url => url.trim()),
+          text: textInput.trim() ? [textInput.trim()] : [],
+          webpages: webpageUrls.filter(url => url.trim()),
+          files: processedFiles
+        },
+        options: {
+          generate_flashcards: autoFlashcards,
+          generate_quiz: autoQuiz
+        }
+      } : {
         title: title || "AI 生成筆記",
         examSystem: examSystem,
         subject: subject,
@@ -187,7 +222,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
           content_md: result.notes,
           content: result.notes, // Legacy fallback
           language: requestData.language,
-          exam_system: requestData.examSystem,
+          exam_system: requestData.exam_system || requestData.examSystem,
           subject: requestData.subject,
           topic: requestData.topic,
           tags: [] // Could be enhanced with AI-extracted tags
@@ -198,7 +233,7 @@ export function AINotesModal({ children }: AINotesModalProps) {
         }
         
         const newNoteId = createResult.data.id
-        track('NOTE_CREATED', { note_id: newNoteId, language, subject, exam_system: examSystem })
+        track('NOTE_CREATED', { note_id: newNoteId, language, subject, exam_system: examSystem, payload_mode: payloadMode })
         
         // Close modal and redirect to AI result page (preserve the result flow!)
         setOpen(false)
@@ -333,6 +368,14 @@ export function AINotesModal({ children }: AINotesModalProps) {
         <div className="space-y-6">
           {/* Configuration Section */}
           <div className="space-y-6">
+            {/* Payload mode toggle */}
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-slate-600">提交模式：</div>
+              <div className="flex items-center gap-2">
+                <Button variant={payloadMode==='legacy' ? 'default' : 'outline'} size="sm" onClick={()=>setPayloadMode('legacy')} disabled={loading}>Legacy</Button>
+                <Button variant={payloadMode==='tunnel' ? 'default' : 'outline'} size="sm" onClick={()=>setPayloadMode('tunnel')} disabled={loading}>Tunnel</Button>
+              </div>
+            </div>
             {/* Basic Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">基本資訊</h3>
@@ -618,6 +661,16 @@ export function AINotesModal({ children }: AINotesModalProps) {
             </div>
 
             {/* Generate Button */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Checkbox id="auto-fc" checked={autoFlashcards} onCheckedChange={(v:any)=>setAutoFlashcards(Boolean(v))} />
+                <Label htmlFor="auto-fc">自動生成閃卡</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="auto-qz" checked={autoQuiz} onCheckedChange={(v:any)=>setAutoQuiz(Boolean(v))} />
+                <Label htmlFor="auto-qz">自動生成測驗</Label>
+              </div>
+            </div>
             <Button
               onClick={handleGenerate}
               disabled={loading || !hasValidSources()}

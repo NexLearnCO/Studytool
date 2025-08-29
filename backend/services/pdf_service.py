@@ -1,5 +1,10 @@
 import PyPDF2
-import fitz  # PyMuPDF
+try:
+    import fitz  # PyMuPDF
+    PYMUPDF_AVAILABLE = True
+except Exception:
+    fitz = None
+    PYMUPDF_AVAILABLE = False
 from io import BytesIO
 import base64
 import mimetypes
@@ -99,6 +104,9 @@ class PDFService:
         """Use PyMuPDF to extract per-page chunks with bbox and image refs.
         Returns: list of chunks [{id, kind, text|image, doc_id, page, bbox, url?}]
         """
+        if not PYMUPDF_AVAILABLE:
+            # Graceful degrade: return empty list; caller may fallback
+            raise ImportError("PyMuPDF (fitz) not installed. Set PYMUPDF_AVAILABLE or install PyMuPDF.")
         file_name = file_info.get('name', 'unknown')
         file_data = file_info.get('data', '')
         if file_data.startswith('data:'):
