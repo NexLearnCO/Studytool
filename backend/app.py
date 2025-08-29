@@ -472,6 +472,7 @@ def unified_notes():
             return chunk_meta[min(i // max(1, len(raw_parts)//max(1,len(chunk_meta))), len(chunk_meta)-1)]
         chunks = [{'id': f'c{i}', 'kind': 'text', 'text': part, **meta_for(i)} for i, part in enumerate(raw_parts[:80])]  # cap size
 
+        # Initialize context_info early and keep enriching it; do not overwrite later
         context_info = {
             'title': title,
             'exam_system': exam_system,
@@ -484,9 +485,9 @@ def unified_notes():
             'sources': source_info
         }
 
-        # Attach blueprint/exam files if available for tunnel path
+        # Attach blueprint/exam files if available for tunnel path (prompts/ at repo root)
         try:
-            base_dir = pathlib.Path(__file__).resolve().parents[1]
+            base_dir = pathlib.Path(__file__).resolve().parents[1].parent
             if subject:
                 bp_path = base_dir / 'prompts' / 'blueprints' / f"{str(subject).upper()}.yaml"
                 if bp_path.exists():

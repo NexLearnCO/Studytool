@@ -27,7 +27,8 @@ class OpenAIService:
 
     # --- Prompt templating helpers for Tunnel pipeline ---
     def _prompts_base(self) -> Path:
-        return Path(__file__).resolve().parents[1] / 'prompts'
+        # prompts 位於專案根目錄的 prompts/
+        return Path(__file__).resolve().parents[2] / 'prompts'
 
     def _load_prompt(self, relative_path: str) -> str:
         path = self._prompts_base() / relative_path
