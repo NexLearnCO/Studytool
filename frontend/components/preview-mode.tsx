@@ -2,6 +2,9 @@
 
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
+import 'katex/dist/katex.min.css'
 
 interface PreviewModeProps {
   markdown: string
@@ -12,13 +15,17 @@ export default function PreviewMode({ markdown, className = '' }: PreviewModePro
   return (
     <div className={`prose prose-slate max-w-none ${className}`}>
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
         components={{
           // 自定義表格樣式
           table: ({ node, ...props }) => (
             <div className="my-6 overflow-x-auto">
               <table className="w-full border-collapse border border-gray-300 bg-white text-sm" {...props} />
             </div>
+          ),
+          img: ({ node, ...props }) => (
+            <img className="max-w-full h-auto my-4" {...props} />
           ),
           thead: ({ node, ...props }) => (
             <thead className="bg-gray-50" {...props} />

@@ -353,13 +353,15 @@ def unified_notes():
                     normalized['webpages'].append(src['url'])
                 elif stype == 'text' and src.get('text'):
                     normalized['text'].append(src['text'])
-                elif stype == 'pdf':
-                    # Currently we expect uploaded file data in legacy path.
-                    # If only a document_id is provided, we skip for now.
-                    doc_id = src.get('document_id')
-                    if doc_id:
-                        # Placeholder info; extraction handled by ingest pipeline (future)
-                        normalized['files'].append({'name': f'doc:{doc_id}', 'size': 0, 'type': 'application/pdf', 'data': None})
+                elif stype in ('pdf', 'file', 'files'):
+                    # Accept base64 uploads directly
+                    if src.get('data'):
+                        normalized['files'].append(src)
+                    else:
+                        # Or accept document_id placeholder
+                        doc_id = src.get('document_id')
+                        if doc_id:
+                            normalized['files'].append({'name': f'doc:{doc_id}', 'size': 0, 'type': 'application/pdf', 'data': None})
                 else:
                     # Unknown type; ignore gracefully
                     pass
@@ -696,10 +698,21 @@ def unified_notes():
                                     for ch in context_info['file_chunks'] if ch.get('kind')=='image'
                                 ]
                                 caps = openai_service.run_image_captions(imgs)
-                                # naive inject: append captions section if any
-                                if isinstance(caps, list) and caps:
-                                    cap_md = "\n\n" + "\n".join([f"圖註 {c.get('image_id')}: {c.get('caption','')}" for c in caps])
-                                    sec_md += cap_md
+                                # naive inject: append actual images + captions for images included in this section
+                                try:
+                                    cap_map = {c.get('image_id'): (c.get('caption') or '') for c in (caps or []) if isinstance(c, dict)}
+                                    section_images = [c for c in (variables.get('chunks_json') or []) if c.get('kind')=='image' and c.get('url')]
+                                    if section_images:
+                                        img_lines = []
+                                        for idx, img in enumerate(section_images, 1):
+                                            caption = cap_map.get(img.get('id')) or f"圖 P{img.get('page','?')}-{idx}"
+                                            url = img.get('url')
+                                            if isinstance(url, str) and url:
+                                                img_lines.append(f"![{caption}]({url})")
+                                        if img_lines:
+                                            sec_md += "\n\n" + "\n".join(img_lines)
+                                except Exception:
+                                    pass
                         except Exception:
                             pass
                         # Detect simple table markers and keep as-is for now (future: call table_to_markdown on raw)
