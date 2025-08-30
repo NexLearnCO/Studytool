@@ -5,6 +5,7 @@ from services.youtube_service import YouTubeService
 from services.openai_service import OpenAIService
 from services.pdf_service import PDFService
 from services.flashcard_service import FlashcardService
+from services.vision_service import VisionService
 from api.notes import notes_bp
 from api.events import events_bp
 from api.artifacts import artifacts_bp
@@ -55,6 +56,41 @@ youtube_service = YouTubeService()
 openai_service = OpenAIService()
 pdf_service = PDFService()
 flashcard_service = FlashcardService()
+vision_service = VisionService()
+
+def insert_images_into_text(text_content: str, placements: list, image_analyses: list) -> str:
+    """
+    Insert images into text content at specified positions
+    """
+    try:
+        paragraphs = text_content.split('\n\n')
+        result_paragraphs = []
+        
+        # Sort placements by paragraph index in reverse order to avoid index shifting
+        sorted_placements = sorted(placements, key=lambda x: x.get('insert_after_paragraph', 0), reverse=True)
+        
+        for i, paragraph in enumerate(paragraphs):
+            result_paragraphs.append(paragraph)
+            
+            # Check if any images should be inserted after this paragraph
+            for placement in sorted_placements:
+                if placement.get('insert_after_paragraph', 0) == i:
+                    img_index = placement.get('image_index', 0)
+                    if 0 <= img_index < len(image_analyses):
+                        analysis = image_analyses[img_index]
+                        caption = placement.get('caption', analysis.get('description', '圖片'))
+                        url = analysis.get('image_url', '')
+                        
+                        if url:
+                            # Insert image as markdown
+                            image_md = f"\n\n![{caption}]({url})\n"
+                            result_paragraphs.append(image_md)
+        
+        return '\n\n'.join(result_paragraphs)
+        
+    except Exception as e:
+        print(f"Failed to insert images into text: {e}")
+        return text_content
 
 @app.route('/')
 def home():
@@ -685,62 +721,8 @@ def unified_notes():
                             sec_md = openai_service.run_latex_standardize(sec_md)
                         except Exception:
                             pass
-                        # Detect image placeholders and generate captions when we have file_chunks
-                        try:
-                            if 'file_chunks' in context_info and any(ch.get('kind')=='image' for ch in context_info['file_chunks']):
-                                imgs = [
-                                    {
-                                        'image_id': ch.get('id'),
-                                        'doc_id': ch.get('doc_id'),
-                                        'page': ch.get('page'),
-                                        'url': ch.get('url'),
-                                        'width': ch.get('width', 0),
-                                        'height': ch.get('height', 0),
-                                        'context': ch.get('context', '')
-                                    }
-                                    for ch in context_info['file_chunks'] if ch.get('kind')=='image'
-                                ]
-                                try:
-                                    caps = openai_service.run_image_captions(imgs)
-                                    # Build caption mapping with improved fallback
-                                    cap_map = {}
-                                    if caps and isinstance(caps, list):
-                                        for c in caps:
-                                            if isinstance(c, dict) and c.get('image_id'):
-                                                cap_map[c.get('image_id')] = c.get('caption', '')
-                                except Exception as e:
-                                    print(f"Image caption generation failed: {e}")
-                                    caps = []
-                                    cap_map = {}
-                                
-                                # Inject images with captions into section
-                                try:
-                                    section_images = [c for c in (variables.get('chunks_json') or []) if c.get('kind')=='image' and c.get('url')]
-                                    if section_images:
-                                        img_lines = []
-                                        for idx, img in enumerate(section_images, 1):
-                                            img_id = img.get('id', '')
-                                            page = img.get('page', '?')
-                                            
-                                            # Use AI-generated caption or create meaningful fallback
-                                            caption = cap_map.get(img_id)
-                                            if not caption:
-                                                # Create a more descriptive fallback caption
-                                                doc_name = img.get('doc_id', '').replace('file:', '').split('/')[-1]
-                                                caption = f"圖表 P{page}-{idx}"
-                                                if doc_name:
-                                                    caption += f" ({doc_name})"
-                                            
-                                            url = img.get('url')
-                                            if isinstance(url, str) and url:
-                                                img_lines.append(f"![{caption}]({url})")
-                                        
-                                        if img_lines:
-                                            sec_md += "\n\n" + "\n".join(img_lines)
-                                except Exception:
-                                    pass
-                        except Exception:
-                            pass
+                        # Store section content for later intelligent image placement
+                        section_content = sec_md
                         # Detect simple table markers and keep as-is for now (future: call table_to_markdown on raw)
                         # Classify tags for frontmatter
                         try:
@@ -798,6 +780,50 @@ def unified_notes():
             language,
                     {**context_info, 'pipeline': 'hybrid-fallback'}
         )
+        # Apply intelligent image integration
+        try:
+            if context_info and 'file_chunks' in context_info:
+                image_chunks = [ch for ch in context_info['file_chunks'] if ch.get('kind') == 'image' and ch.get('local_path')]
+                if image_chunks:
+                    print(f"Processing {len(image_chunks)} images with Vision AI...")
+                    
+                    # Step 1: Analyze each image with Vision AI
+                    image_analyses = []
+                    for img_chunk in image_chunks:
+                        local_path = img_chunk.get('local_path')
+                        if local_path and os.path.exists(local_path):
+                            analysis = vision_service.analyze_image_content(
+                                image_path=local_path,
+                                image_url=img_chunk.get('url', ''),
+                                page=img_chunk.get('page', 0),
+                                context=img_chunk.get('context', '')
+                            )
+                            image_analyses.append(analysis)
+                    
+                    # Step 2: Determine optimal placement positions
+                    if image_analyses:
+                        placements = vision_service.determine_image_placements(notes, image_analyses)
+                        
+                        # Step 3: Insert images at determined positions
+                        if placements:
+                            notes = insert_images_into_text(notes, placements, image_analyses)
+                            print(f"Successfully integrated {len(placements)} images into notes")
+        except Exception as e:
+            print(f"Intelligent image integration failed: {e}")
+            # Fall back to simple append if vision integration fails
+            try:
+                if context_info and 'file_chunks' in context_info:
+                    simple_images = [ch for ch in context_info['file_chunks'] if ch.get('kind') == 'image' and ch.get('url')]
+                    if simple_images:
+                        img_lines = []
+                        for i, img in enumerate(simple_images, 1):
+                            caption = f"圖{i}：第{img.get('page', '?')}頁"
+                            img_lines.append(f"![{caption}]({img.get('url')})")
+                        if img_lines:
+                            notes += "\n\n## 相關圖片\n\n" + "\n\n".join(img_lines)
+            except Exception:
+                pass
+
         try:
             emit('PIPELINE_END', {'mode': mode, 'words': len(notes.split())})
         except Exception:

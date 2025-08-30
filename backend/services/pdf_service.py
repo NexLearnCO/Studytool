@@ -199,6 +199,11 @@ class PDFService:
                             # Fallback to inline placeholder if write fails
                             url = f'inline:image:{doc_id}:{page_index}:{xref}'
                     
+                    # Store local file path for vision analysis
+                    local_path = None
+                    if assets_root:
+                        local_path = os.path.join(assets_root, file_name_png)
+                    
                     chunks.append({
                         'id': f'{doc_id}-p{page_index}-img{xref}',
                         'kind': 'image',
@@ -207,6 +212,7 @@ class PDFService:
                         'bbox': None,
                         'asset_id': asset_id,
                         'url': url,
+                        'local_path': local_path,  # Add local path for vision analysis
                         'width': pix.width,
                         'height': pix.height,
                         'context': context_text
