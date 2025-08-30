@@ -11,6 +11,7 @@ import mimetypes
 import os
 import hashlib
 import re
+from .image_storage_service import ImageStorageService
 
 # Import for DOCX/PPTX support
 try:
