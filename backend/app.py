@@ -693,22 +693,48 @@ def unified_notes():
                                         'image_id': ch.get('id'),
                                         'doc_id': ch.get('doc_id'),
                                         'page': ch.get('page'),
-                                        'url': ch.get('url')
+                                        'url': ch.get('url'),
+                                        'width': ch.get('width', 0),
+                                        'height': ch.get('height', 0),
+                                        'context': ch.get('context', '')
                                     }
                                     for ch in context_info['file_chunks'] if ch.get('kind')=='image'
                                 ]
-                                caps = openai_service.run_image_captions(imgs)
-                                # naive inject: append actual images + captions for images included in this section
                                 try:
-                                    cap_map = {c.get('image_id'): (c.get('caption') or '') for c in (caps or []) if isinstance(c, dict)}
+                                    caps = openai_service.run_image_captions(imgs)
+                                    # Build caption mapping with improved fallback
+                                    cap_map = {}
+                                    if caps and isinstance(caps, list):
+                                        for c in caps:
+                                            if isinstance(c, dict) and c.get('image_id'):
+                                                cap_map[c.get('image_id')] = c.get('caption', '')
+                                except Exception as e:
+                                    print(f"Image caption generation failed: {e}")
+                                    caps = []
+                                    cap_map = {}
+                                
+                                # Inject images with captions into section
+                                try:
                                     section_images = [c for c in (variables.get('chunks_json') or []) if c.get('kind')=='image' and c.get('url')]
                                     if section_images:
                                         img_lines = []
                                         for idx, img in enumerate(section_images, 1):
-                                            caption = cap_map.get(img.get('id')) or f"圖 P{img.get('page','?')}-{idx}"
+                                            img_id = img.get('id', '')
+                                            page = img.get('page', '?')
+                                            
+                                            # Use AI-generated caption or create meaningful fallback
+                                            caption = cap_map.get(img_id)
+                                            if not caption:
+                                                # Create a more descriptive fallback caption
+                                                doc_name = img.get('doc_id', '').replace('file:', '').split('/')[-1]
+                                                caption = f"圖表 P{page}-{idx}"
+                                                if doc_name:
+                                                    caption += f" ({doc_name})"
+                                            
                                             url = img.get('url')
                                             if isinstance(url, str) and url:
                                                 img_lines.append(f"![{caption}]({url})")
+                                        
                                         if img_lines:
                                             sec_md += "\n\n" + "\n".join(img_lines)
                                 except Exception:

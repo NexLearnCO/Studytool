@@ -159,6 +159,35 @@ class PDFService:
                     asset_id = asset_hash[:32]
                     file_name_png = f"{asset_id}.png"
                     url = f"/static/assets/{safe_doc_folder}/{file_name_png}"
+                    
+                    # Extract context around image position
+                    context_text = ""
+                    try:
+                        # Get image bbox for context extraction
+                        img_rect = None
+                        for block in page.get_images():
+                            if block[0] == xref:
+                                img_instances = page.get_image_instances(xref)
+                                if img_instances:
+                                    img_rect = img_instances[0]
+                                    break
+                        
+                        # Extract text near the image
+                        if img_rect:
+                            # Expand search area around image
+                            expand = 50  # pixels
+                            search_rect = fitz.Rect(
+                                max(0, img_rect.x0 - expand),
+                                max(0, img_rect.y0 - expand),
+                                min(page.rect.width, img_rect.x1 + expand),
+                                min(page.rect.height, img_rect.y1 + expand)
+                            )
+                            nearby_text = page.get_textbox(search_rect)
+                            if nearby_text:
+                                context_text = nearby_text.strip()[:200]  # Limit context length
+                    except Exception:
+                        pass  # Continue without context if extraction fails
+                    
                     # Persist if we can
                     if assets_root:
                         try:
@@ -169,6 +198,7 @@ class PDFService:
                         except Exception:
                             # Fallback to inline placeholder if write fails
                             url = f'inline:image:{doc_id}:{page_index}:{xref}'
+                    
                     chunks.append({
                         'id': f'{doc_id}-p{page_index}-img{xref}',
                         'kind': 'image',
@@ -178,7 +208,8 @@ class PDFService:
                         'asset_id': asset_id,
                         'url': url,
                         'width': pix.width,
-                        'height': pix.height
+                        'height': pix.height,
+                        'context': context_text
                     })
                 except Exception:
                     # On failure, keep previous behavior with inline placeholder

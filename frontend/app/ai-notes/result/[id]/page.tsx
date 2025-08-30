@@ -599,7 +599,7 @@ export default function AIResultPage() {
                         {isReadingMode ? (
                           <div className="p-6">
                             <PreviewMode 
-                              markdown={normalizeMarkdown(markdown, process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:5000")}
+                              markdown={normalizeMarkdown(markdown)}
                               className="max-w-none"
                             />
                           </div>

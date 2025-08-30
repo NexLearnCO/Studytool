@@ -64,7 +64,7 @@ export default function SimpleBlockNoteUnified({
       const loadContent = async () => {
         try {
           // 1. Normalize markdown (handle frontmatter, LaTeX, static URLs)
-          const normalized = normalizeMarkdown(initialMarkdown, apiBase)
+          const normalized = normalizeMarkdown(initialMarkdown)
           
           // 2. Parse to blocks
           let blocks = await editor.tryParseMarkdownToBlocks(normalized)
@@ -81,7 +81,7 @@ export default function SimpleBlockNoteUnified({
         } catch (error) {
           console.error('Failed to parse markdown:', error)
           // 降級處理：插入為純文本段落
-          const normalized = normalizeMarkdown(initialMarkdown, apiBase)
+          const normalized = normalizeMarkdown(initialMarkdown)
           editor.replaceBlocks(editor.document, [{
             type: "paragraph",
             content: normalized
